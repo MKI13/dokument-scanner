@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload as UploadIcon, Search, RefreshCw } from 'lucide-react';
+import { Camera, Upload as UploadIcon, FolderOpen } from 'lucide-react';
 import { documentService, ProcessingProgress } from '../services/document.service';
 import { modalService } from '../services/modal.service';
 import './Upload.css';
@@ -18,7 +18,7 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
   const [processingFiles, setProcessingFiles] = useState({ current: 0, total: 0 });
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFilesSelected = async (files: File[]) => {
     setIsProcessing(true);
@@ -89,8 +89,8 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
     cameraInputRef.current?.click();
   };
 
-  const handleGalleryInfoClick = () => {
-    galleryInputRef.current?.click();
+  const handleFileManagerClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleOCRInfoClick = async () => {
@@ -124,6 +124,7 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
       </div>
 
       <div className="page-content">
+        {/* KAMERA INPUT - Nur Kamera */}
         <input
           ref={cameraInputRef}
           type="file"
@@ -134,10 +135,11 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
           disabled={isProcessing}
         />
 
+        {/* DATEIMANAGER INPUT - Alle Dateien, Mehrfachauswahl */}
         <input
-          ref={galleryInputRef}
+          ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           multiple
           onChange={handleFileChange}
           style={{ display: 'none' }}
@@ -155,12 +157,12 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
           </button>
 
           <button
-            onClick={() => galleryInputRef.current?.click()}
+            onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing}
-            className="upload-btn gallery-btn"
+            className="upload-btn file-btn"
           >
-            <UploadIcon size={40} />
-            <span>Galerie</span>
+            <FolderOpen size={40} />
+            <span>Dateien</span>
           </button>
         </div>
 
@@ -206,13 +208,13 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
 
             <button 
               className="info-card clickable" 
-              onClick={handleGalleryInfoClick}
+              onClick={handleFileManagerClick}
               disabled={isProcessing}
             >
               <div className="info-icon">📁</div>
               <div className="info-text">
-                <h3>Galerie</h3>
-                <p>Wähle Bilder aus deiner Galerie</p>
+                <h3>Dateimanager</h3>
+                <p>Wähle Dateien aus allen Ordnern</p>
               </div>
             </button>
 

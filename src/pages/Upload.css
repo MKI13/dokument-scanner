@@ -78,16 +78,16 @@
   color: #0ea5e9;
 }
 
-.gallery-btn {
+.file-btn {
   border-color: #10b981;
 }
 
-.gallery-btn:hover:not(:disabled) {
+.file-btn:hover:not(:disabled) {
   background: rgba(16, 185, 129, 0.1);
   border-color: #10b981;
 }
 
-.gallery-btn svg {
+.file-btn svg {
   color: #10b981;
 }
 
