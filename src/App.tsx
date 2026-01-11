@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload as UploadIcon, FileText, Calendar, Users, Copy } from 'lucide-react';
 import { Upload } from './pages/Upload';
+import { Modal } from './components/Modal/Modal';
 import { AllDocuments } from './pages/AllDocuments';
 import { Calendar as CalendarPage } from './pages/Calendar';
 import { Customers } from './pages/Customers';
@@ -77,7 +78,8 @@ function App() {
       onTouchEnd={onTouchEnd}
     >
       <header className="app-header">
-        <div className="app-icon">📄</div>
+        <div className="app-icon">📄  <Modal />
+      </div>
         <h1>Dokument Scanner</h1>
       </header>
 
@@ -121,7 +123,8 @@ function App() {
       <main className="app-content">
         {renderPage()}
       </main>
-    </div>
+      <Modal />
+      </div>
   );
 }
 

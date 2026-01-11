@@ -1,128 +1,45 @@
-import './modal.css';
-import { createRoot } from 'react-dom/client';
-import React from 'react';
-import { Modal } from '../components/UI/Modal';
-
 class ModalService {
-  private container: HTMLDivElement | null = null;
-  private root: any = null;
+  private resolveCallback: ((value: boolean) => void) | null = null;
+  private messageCallback: ((message: string, title: string, type: 'success' | 'error' | 'confirm' | 'info') => void) | null = null;
 
-  private getContainer() {
-    if (!this.container) {
-      this.container = document.createElement('div');
-      this.container.id = 'modal-root';
-      document.body.appendChild(this.container);
-      this.root = createRoot(this.container);
-    }
-    return this.container;
+  setMessageHandler(handler: (message: string, title: string, type: 'success' | 'error' | 'confirm' | 'info') => void) {
+    this.messageCallback = handler;
   }
 
-  private show(props: any) {
-    this.getContainer();
-    this.root.render(React.createElement(Modal, props));
+  setConfirmHandler(handler: () => Promise<boolean>) {
+    // Wird nicht mehr benötigt, da wir Promise direkt nutzen
   }
 
-  private close() {
-    if (this.root) {
-      this.root.unmount();
-    }
-    if (this.container) {
-      document.body.removeChild(this.container);
-      this.container = null;
-      this.root = null;
+  private showMessage(message: string, title: string, type: 'success' | 'error' | 'confirm' | 'info'): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.resolveCallback = resolve;
+      if (this.messageCallback) {
+        this.messageCallback(message, title, type);
+      }
+    });
+  }
+
+  resolve(value: boolean) {
+    if (this.resolveCallback) {
+      this.resolveCallback(value);
+      this.resolveCallback = null;
     }
   }
 
-  alert(message: string, title: string = 'Hinweis') {
-    return new Promise<void>((resolve) => {
-      this.show({
-        type: 'info',
-        title,
-        message,
-        onConfirm: () => {
-          this.close();
-          resolve();
-        },
-        onCancel: () => {
-          this.close();
-          resolve();
-        }
-      });
-    });
+  async success(message: string, title: string = 'Erfolg') {
+    await this.showMessage(message, title, 'success');
   }
 
-  success(message: string, title: string = 'Erfolgreich!') {
-    return new Promise<void>((resolve) => {
-      this.show({
-        type: 'success',
-        title,
-        message,
-        onConfirm: () => {
-          this.close();
-          resolve();
-        },
-        onCancel: () => {
-          this.close();
-          resolve();
-        }
-      });
-    });
+  async error(message: string, title: string = 'Fehler') {
+    await this.showMessage(message, title, 'error');
   }
 
-  error(message: string, title: string = 'Fehler') {
-    return new Promise<void>((resolve) => {
-      this.show({
-        type: 'error',
-        title,
-        message,
-        onConfirm: () => {
-          this.close();
-          resolve();
-        },
-        onCancel: () => {
-          this.close();
-          resolve();
-        }
-      });
-    });
+  async confirm(message: string, title: string = 'Bestätigen'): Promise<boolean> {
+    return await this.showMessage(message, title, 'confirm');
   }
 
-  warning(message: string, title: string = 'Warnung') {
-    return new Promise<void>((resolve) => {
-      this.show({
-        type: 'warning',
-        title,
-        message,
-        onConfirm: () => {
-          this.close();
-          resolve();
-        },
-        onCancel: () => {
-          this.close();
-          resolve();
-        }
-      });
-    });
-  }
-
-  confirm(message: string, title: string = 'Bestätigung') {
-    return new Promise<boolean>((resolve) => {
-      this.show({
-        type: 'confirm',
-        title,
-        message,
-        onConfirm: () => {
-          this.close();
-          resolve(true);
-        },
-        onCancel: () => {
-          this.close();
-          resolve(false);
-        },
-        confirmText: 'Ja',
-        cancelText: 'Nein'
-      });
-    });
+  async info(message: string, title: string = 'Information') {
+    await this.showMessage(message, title, 'info');
   }
 }
 
