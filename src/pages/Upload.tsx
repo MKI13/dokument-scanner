@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload as UploadIcon, RefreshCw } from 'lucide-react';
+import { Camera, Upload as UploadIcon } from 'lucide-react';
 import { documentService, ProcessingProgress } from '../services/document.service';
 import { modalService } from '../services/modal.service';
-import { duplicateDetectionService } from '../services/duplicate-detection.service';
 import './Upload.css';
 
 interface UploadProps {
@@ -43,7 +42,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
               });
             },
             async (warning) => {
-              // Duplikat-Warnung
               return await modalService.confirm(
                 warning.message,
                 'Duplikat gefunden'
@@ -87,113 +85,114 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
   };
 
   return (
-    <div className="upload-page">
-      <div className="upload-header">
-        <h2>Dokumente hochladen</h2>
-        <p>Fotografiere oder wähle Dokumente zum Hochladen</p>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>📤 Dokumente hochladen</h1>
       </div>
 
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-        disabled={isProcessing}
-      />
-
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-        disabled={isProcessing}
-      />
-
-      <div className="file-upload">
-        <button
-          onClick={() => cameraInputRef.current?.click()}
+      <div className="page-content">
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
           disabled={isProcessing}
-          className="upload-button camera"
-        >
-          <Camera size={32} />
-          <span>Kamera</span>
-        </button>
+        />
 
-        <button
-          onClick={() => galleryInputRef.current?.click()}
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
           disabled={isProcessing}
-          className="upload-button gallery"
-        >
-          <UploadIcon size={32} />
-          <span>Galerie</span>
-        </button>
+        />
+
+        <div className="upload-buttons">
+          <button
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={isProcessing}
+            className="upload-btn camera-btn"
+          >
+            <Camera size={40} />
+            <span>Kamera</span>
+          </button>
+
+          <button
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={isProcessing}
+            className="upload-btn gallery-btn"
+          >
+            <UploadIcon size={40} />
+            <span>Galerie</span>
+          </button>
+        </div>
+
+        {isProcessing && (
+          <div className="progress-card">
+            <div className="progress-header">
+              <span className="progress-label">
+                🔄 Datei {processingFiles.current}/{processingFiles.total}
+              </span>
+              <span className="progress-value">
+                {Math.round(progress.progress)}%
+              </span>
+            </div>
+
+            <div className="progress-bar-container">
+              <div
+                className="progress-bar-fill"
+                style={{ width: `${progress.progress}%` }}
+              />
+            </div>
+
+            {progress.message && (
+              <div className="progress-message">
+                {progress.message}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isProcessing && (
+          <div className="info-cards">
+            <div className="info-card">
+              <div className="info-icon">📸</div>
+              <div className="info-text">
+                <h3>Kamera</h3>
+                <p>Fotografiere Dokumente direkt</p>
+              </div>
+            </div>
+
+            <div className="info-card">
+              <div className="info-icon">📁</div>
+              <div className="info-text">
+                <h3>Galerie</h3>
+                <p>Wähle Bilder aus deiner Galerie</p>
+              </div>
+            </div>
+
+            <div className="info-card">
+              <div className="info-icon">🔍</div>
+              <div className="info-text">
+                <h3>Automatische OCR</h3>
+                <p>Texterkennung für Kunde, Betrag, Datum</p>
+              </div>
+            </div>
+
+            <div className="info-card">
+              <div className="info-icon">🔁</div>
+              <div className="info-text">
+                <h3>Duplikat-Erkennung</h3>
+                <p>Warnung bei identischen Dokumenten</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {isProcessing && (
-        <div className="ocr-progress">
-          <div className="progress-header">
-            <span className="progress-status">
-              🔄 Datei {processingFiles.current}/{processingFiles.total}
-            </span>
-            <span className="progress-percentage">
-              {Math.round(progress.progress)}%
-            </span>
-          </div>
-
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${progress.progress}%` }}
-            />
-          </div>
-
-          {progress.message && (
-            <div className="progress-message">
-              {progress.message}
-            </div>
-          )}
-        </div>
-      )}
-
-      {!isProcessing && (
-        <div className="upload-info">
-          <div className="info-card">
-            <span className="info-icon">📸</span>
-            <div>
-              <h3>Kamera</h3>
-              <p>Fotografiere Dokumente direkt</p>
-            </div>
-          </div>
-
-          <div className="info-card">
-            <span className="info-icon">📁</span>
-            <div>
-              <h3>Galerie</h3>
-              <p>Wähle Bilder aus deiner Galerie</p>
-            </div>
-          </div>
-
-          <div className="info-card">
-            <span className="info-icon">🔍</span>
-            <div>
-              <h3>Automatische OCR</h3>
-              <p>Texterkennung für Kunde, Betrag, Datum</p>
-            </div>
-          </div>
-
-          <div className="info-card">
-            <span className="info-icon">🔁</span>
-            <div>
-              <h3>Duplikat-Erkennung</h3>
-              <p>Warnung bei identischen Dokumenten</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
