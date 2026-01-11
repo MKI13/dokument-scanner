@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
-import { duplicateDetectionService } from '../services/duplicate-detection.service';
 import { modalService } from '../services/modal.service';
 import { Document } from '../types/document';
-import { RefreshCw, Trash2, AlertCircle, Copy } from 'lucide-react';
+import { RefreshCw, Trash2, AlertCircle } from 'lucide-react';
 import './Duplicates.css';
 
 interface DuplicateGroup {
@@ -18,6 +17,7 @@ interface DuplicatesProps {
 export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
   const [groups, setGroups] = useState<DuplicateGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   useEffect(() => {
     scanForDuplicates();
@@ -59,10 +59,10 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
     }
   };
 
-  const handleDeleteDocument = async (docId: number) => {
+  const handleDeleteDocument = async (docId: number, filename: string) => {
     const confirmed = await modalService.confirm(
-      'Dieses Dokument wirklich löschen?',
-      'Löschen bestätigen'
+      `"${filename}" wirklich löschen?`,
+      'Dokument löschen'
     );
 
     if (!confirmed) return;
@@ -77,9 +77,9 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
     }
   };
 
-  const handleKeepNewest = async (group: DuplicateGroup) => {
+  const handleDeleteAllButNewest = async (group: DuplicateGroup) => {
     const confirmed = await modalService.confirm(
-      `${group.documents.length - 1} ältere Version(en) löschen?`,
+      `${group.documents.length - 1} ältere Version(en) löschen und nur die neueste behalten?`,
       'Nur neueste behalten'
     );
 
@@ -102,6 +102,21 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
     }
   };
 
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatSize = (bytes: number) => {
+    const kb = bytes / 1024;
+    return kb < 1024 ? kb.toFixed(1) + ' KB' : (kb / 1024).toFixed(1) + ' MB';
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -112,7 +127,7 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
   }
 
   return (
-    <div className="duplicates-page">
+    <div className="page-container">
       <div className="page-header">
         <h1>🔁 Duplikate</h1>
         <button onClick={scanForDuplicates} className="refresh-button">
@@ -121,59 +136,119 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
         </button>
       </div>
 
-      {groups.length > 0 ? (
-        <div className="duplicates-list">
-          {groups.map((group) => (
-            <div key={group.hash} className="duplicate-group">
-              <div className="duplicate-header">
-                <h3>🔁 {group.documents.length}x vorhanden</h3>
-                <button
-                  onClick={() => handleKeepNewest(group)}
-                  className="btn-danger"
-                >
-                  <Trash2 size={16} />
-                  Nur neueste behalten
-                </button>
+      <div className="page-content">
+        {groups.length > 0 ? (
+          <>
+            <div className="duplicates-stats">
+              <div className="stat-item">
+                <span className="stat-value">{groups.length}</span>
+                <span className="stat-label">Duplikat-Gruppen</span>
               </div>
-
-              <div className="duplicate-items">
-                {group.documents.map((doc, idx) => (
-                  <div key={doc.id} className="duplicate-item">
-                    <div className="duplicate-preview">
-                      <img src={URL.createObjectURL(doc.blob)} alt="" />
-                      <span className="duplicate-badge">
-                        {idx === 0 ? '🆕 Neueste' : `#${idx + 1}`}
-                      </span>
-                    </div>
-
-                    <div className="duplicate-info">
-                      <strong>{doc.filename}</strong>
-                      <span>{new Date(doc.uploadDate).toLocaleString('de-DE')}</span>
-                      {doc.customer && <span>👤 {doc.customer}</span>}
-                      {doc.amount && <span>💰 {doc.amount.toFixed(2)} €</span>}
-                    </div>
-
-                    {doc.id && (
-                      <button
-                        onClick={() => handleDeleteDocument(doc.id!)}
-                        className="btn-delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+              <div className="stat-item">
+                <span className="stat-value">
+                  {groups.reduce((sum, g) => sum + g.documents.length - 1, 0)}
+                </span>
+                <span className="stat-label">Doppelte Dokumente</span>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="no-duplicates">
-          <AlertCircle size={64} />
-          <h2>Keine Duplikate gefunden</h2>
-          <p>Alle Dokumente sind einzigartig 🎉</p>
-        </div>
-      )}
+
+            <div className="duplicates-list">
+              {groups.map((group) => (
+                <div key={group.hash} className="duplicate-group">
+                  <div 
+                    className="duplicate-group-header"
+                    onClick={() => setExpandedGroup(
+                      expandedGroup === group.hash ? null : group.hash
+                    )}
+                  >
+                    <div className="duplicate-group-info">
+                      <h3>{group.documents[0].filename}</h3>
+                      <span className="duplicate-count">
+                        🔁 {group.documents.length}x vorhanden
+                      </span>
+                    </div>
+                    <button className="expand-btn">
+                      {expandedGroup === group.hash ? '▼' : '▶'}
+                    </button>
+                  </div>
+
+                  {expandedGroup === group.hash && (
+                    <div className="duplicate-items">
+                      {group.documents.map((doc, idx) => (
+                        <div key={doc.id} className="duplicate-item">
+                          <div className="duplicate-item-preview">
+                            {doc.blob ? (
+                              <img 
+                                src={URL.createObjectURL(doc.blob)} 
+                                alt={doc.filename}
+                              />
+                            ) : (
+                              <div className="no-preview">❌ Kein Bild</div>
+                            )}
+                            <span className={`item-badge ${idx === 0 ? 'newest' : ''}`}>
+                              {idx === 0 ? '🆕 Neueste' : `#${idx + 1}`}
+                            </span>
+                          </div>
+
+                          <div className="duplicate-item-info">
+                            <div className="info-row">
+                              <strong>{doc.filename}</strong>
+                            </div>
+                            <div className="info-row">
+                              📅 {formatDate(doc.uploadDate)}
+                            </div>
+                            {doc.customer && (
+                              <div className="info-row">
+                                👤 {doc.customer}
+                              </div>
+                            )}
+                            {doc.amount && (
+                              <div className="info-row">
+                                💰 {doc.amount.toFixed(2)} €
+                              </div>
+                            )}
+                            {doc.blob && (
+                              <div className="info-row small">
+                                📦 {formatSize(doc.blob.size)}
+                              </div>
+                            )}
+                          </div>
+
+                          {doc.id && (
+                            <button
+                              onClick={() => handleDeleteDocument(doc.id!, doc.filename)}
+                              className="delete-btn"
+                              title="Dieses Dokument löschen"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      <div className="group-actions">
+                        <button
+                          onClick={() => handleDeleteAllButNewest(group)}
+                          className="btn-danger"
+                        >
+                          <Trash2 size={16} />
+                          Nur neueste behalten
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="no-duplicates">
+            <AlertCircle size={64} />
+            <h2>Keine Duplikate gefunden</h2>
+            <p>Alle Dokumente sind einzigartig 🎉</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
