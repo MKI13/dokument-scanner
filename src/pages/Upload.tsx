@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, FolderOpen } from 'lucide-react';
+import { Camera, FolderOpen, Info } from 'lucide-react';
 import { documentService, ProcessingProgress } from '../services/document.service';
 import { modalService } from '../services/modal.service';
 import './Upload.css';
@@ -84,10 +84,26 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
     }
   };
 
+  const handleInfoClick = async () => {
+    await modalService.info(
+      '📸 Fotografiere Dokumente direkt mit der Kamera oder wähle Dateien aus dem Speicher.\n\n' +
+      '🔍 OCR erkennt automatisch Kundennamen, Beträge und Datumsangaben.\n\n' +
+      '🔁 Duplikate werden beim Upload erkannt und können übersprungen werden.',
+      'ℹ️ Upload-Informationen'
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
         <h1>📤 Dokumente hochladen</h1>
+        <button 
+          onClick={handleInfoClick}
+          className="header-info-btn"
+          title="Informationen"
+        >
+          <Info size={20} />
+        </button>
       </div>
 
       <div className="page-content">
@@ -154,20 +170,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
                 {progress.message}
               </div>
             )}
-          </div>
-        )}
-
-        {!isProcessing && (
-          <div className="upload-info-text">
-            <p>
-              📸 Fotografiere Dokumente direkt mit der Kamera oder wähle Dateien aus dem Speicher.
-            </p>
-            <p>
-              🔍 OCR erkennt automatisch Kundennamen, Beträge und Datumsangaben.
-            </p>
-            <p>
-              🔁 Duplikate werden beim Upload erkannt und können übersprungen werden.
-            </p>
           </div>
         )}
       </div>
