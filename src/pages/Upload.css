@@ -56,6 +56,10 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
+.upload-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .upload-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -152,11 +156,27 @@
   gap: 16px;
   align-items: flex-start;
   transition: all 0.2s;
+  text-align: left;
+  width: 100%;
 }
 
-.info-card:hover {
+.info-card.clickable {
+  cursor: pointer;
+}
+
+.info-card.clickable:hover:not(:disabled) {
   border-color: #0ea5e9;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.info-card.clickable:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.info-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .info-icon {

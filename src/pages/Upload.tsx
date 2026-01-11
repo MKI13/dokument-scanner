@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload as UploadIcon } from 'lucide-react';
+import { Camera, Upload as UploadIcon, Search, RefreshCw } from 'lucide-react';
 import { documentService, ProcessingProgress } from '../services/document.service';
 import { modalService } from '../services/modal.service';
 import './Upload.css';
@@ -84,6 +84,39 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
     }
   };
 
+  // Info-Karten Click Handler
+  const handleCameraInfoClick = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const handleGalleryInfoClick = () => {
+    galleryInputRef.current?.click();
+  };
+
+  const handleOCRInfoClick = async () => {
+    await modalService.info(
+      'OCR (Optical Character Recognition) erkennt automatisch:\n\n' +
+      '• Kundennamen\n' +
+      '• Beträge in Euro\n' +
+      '• Rechnungs-/Lieferschein-Nummern\n' +
+      '• Datumsangaben\n\n' +
+      'Die erkannten Daten werden automatisch gespeichert und sind durchsuchbar.',
+      '🔍 Automatische Texterkennung'
+    );
+  };
+
+  const handleDuplicateInfoClick = async () => {
+    await modalService.info(
+      'Die Duplikat-Erkennung vergleicht hochgeladene Dokumente:\n\n' +
+      '• Warnung bei identischen Dateien\n' +
+      '• Vergleich per Hash (schnell & sicher)\n' +
+      '• Option zum Überspringen\n' +
+      '• Duplikate-Tab zum Verwalten\n\n' +
+      'So vermeidest du versehentliche Mehrfach-Uploads!',
+      '🔁 Duplikat-Erkennung'
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -159,37 +192,51 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
 
         {!isProcessing && (
           <div className="info-cards">
-            <div className="info-card">
+            <button 
+              className="info-card clickable" 
+              onClick={handleCameraInfoClick}
+              disabled={isProcessing}
+            >
               <div className="info-icon">📸</div>
               <div className="info-text">
                 <h3>Kamera</h3>
                 <p>Fotografiere Dokumente direkt</p>
               </div>
-            </div>
+            </button>
 
-            <div className="info-card">
+            <button 
+              className="info-card clickable" 
+              onClick={handleGalleryInfoClick}
+              disabled={isProcessing}
+            >
               <div className="info-icon">📁</div>
               <div className="info-text">
                 <h3>Galerie</h3>
                 <p>Wähle Bilder aus deiner Galerie</p>
               </div>
-            </div>
+            </button>
 
-            <div className="info-card">
+            <button 
+              className="info-card clickable" 
+              onClick={handleOCRInfoClick}
+            >
               <div className="info-icon">🔍</div>
               <div className="info-text">
                 <h3>Automatische OCR</h3>
                 <p>Texterkennung für Kunde, Betrag, Datum</p>
               </div>
-            </div>
+            </button>
 
-            <div className="info-card">
+            <button 
+              className="info-card clickable" 
+              onClick={handleDuplicateInfoClick}
+            >
               <div className="info-icon">🔁</div>
               <div className="info-text">
                 <h3>Duplikat-Erkennung</h3>
                 <p>Warnung bei identischen Dokumenten</p>
               </div>
-            </div>
+            </button>
           </div>
         )}
       </div>
