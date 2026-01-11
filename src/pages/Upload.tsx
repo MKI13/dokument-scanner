@@ -84,30 +84,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
     }
   };
 
-  const handleOCRInfoClick = async () => {
-    await modalService.info(
-      'OCR (Optical Character Recognition) erkennt automatisch:\n\n' +
-      '• Kundennamen\n' +
-      '• Beträge in Euro\n' +
-      '• Rechnungs-/Lieferschein-Nummern\n' +
-      '• Datumsangaben\n\n' +
-      'Die erkannten Daten werden automatisch gespeichert und sind durchsuchbar.',
-      '🔍 Automatische Texterkennung'
-    );
-  };
-
-  const handleDuplicateInfoClick = async () => {
-    await modalService.info(
-      'Die Duplikat-Erkennung vergleicht hochgeladene Dokumente:\n\n' +
-      '• Warnung bei identischen Dateien\n' +
-      '• Vergleich per Hash (schnell & sicher)\n' +
-      '• Option zum Überspringen\n' +
-      '• Duplikate-Tab zum Verwalten\n\n' +
-      'So vermeidest du versehentliche Mehrfach-Uploads!',
-      '🔁 Duplikat-Erkennung'
-    );
-  };
-
   return (
     <div className="page-container">
       <div className="page-header">
@@ -115,7 +91,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
       </div>
 
       <div className="page-content">
-        {/* KAMERA INPUT - Nur Kamera */}
         <input
           ref={cameraInputRef}
           type="file"
@@ -126,7 +101,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
           disabled={isProcessing}
         />
 
-        {/* DATEIMANAGER INPUT - Direkter Dateizugriff ohne Galerie-Auswahl */}
         <input
           ref={fileInputRef}
           type="file"
@@ -143,7 +117,7 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
             disabled={isProcessing}
             className="upload-btn camera-btn"
           >
-            <Camera size={40} />
+            <Camera size={48} />
             <span>Kamera</span>
           </button>
 
@@ -152,7 +126,7 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
             disabled={isProcessing}
             className="upload-btn file-btn"
           >
-            <FolderOpen size={40} />
+            <FolderOpen size={48} />
             <span>Dateien</span>
           </button>
         </div>
@@ -184,28 +158,16 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
         )}
 
         {!isProcessing && (
-          <div className="info-cards">
-            <button 
-              className="info-card clickable" 
-              onClick={handleOCRInfoClick}
-            >
-              <div className="info-icon">🔍</div>
-              <div className="info-text">
-                <h3>Automatische OCR</h3>
-                <p>Texterkennung für Kunde, Betrag, Datum</p>
-              </div>
-            </button>
-
-            <button 
-              className="info-card clickable" 
-              onClick={handleDuplicateInfoClick}
-            >
-              <div className="info-icon">🔁</div>
-              <div className="info-text">
-                <h3>Duplikat-Erkennung</h3>
-                <p>Warnung bei identischen Dokumenten</p>
-              </div>
-            </button>
+          <div className="upload-info-text">
+            <p>
+              📸 Fotografiere Dokumente direkt mit der Kamera oder wähle Dateien aus dem Speicher.
+            </p>
+            <p>
+              🔍 OCR erkennt automatisch Kundennamen, Beträge und Datumsangaben.
+            </p>
+            <p>
+              🔁 Duplikate werden beim Upload erkannt und können übersprungen werden.
+            </p>
           </div>
         )}
       </div>
