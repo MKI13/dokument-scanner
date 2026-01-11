@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>DB Löschen</title></head>
+<body>
+<h1>Datenbank wird gelöscht...</h1>
+<script>
+// Lösche alte Datenbanken
+indexedDB.deleteDatabase('DocScannerV3');
+indexedDB.deleteDatabase('DocScannerV2');
+indexedDB.deleteDatabase('DocScannerV1');
+indexedDB.deleteDatabase('DocScanner');
+
+setTimeout(() => {
+  document.body.innerHTML = '<h1 style="color: green;">✅ Alte Datenbanken gelöscht!</h1><p>Schließe dieses Fenster und lade die App neu.</p>';
+}, 1000);
+</script>
+</body>
+</html>

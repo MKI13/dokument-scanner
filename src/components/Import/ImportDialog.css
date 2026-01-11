@@ -1,0 +1,409 @@
+.import-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  padding: 20px;
+}
+
+.import-dialog-container {
+  background: #1e1e2e;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+.import-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #3a3a3a;
+  background: #2a2a2a;
+}
+
+.import-dialog-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.import-close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b0b0b0;
+  transition: all 0.2s;
+}
+
+.import-close-button:hover {
+  background: #3a3a3a;
+  color: #e0e0e0;
+}
+
+/* Content */
+.import-dialog-content {
+  padding: 24px;
+}
+
+/* Info Box */
+.import-info-box {
+  background: #fff3e0;
+  border: 2px solid #ffb74d;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.import-info-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  color: #f57c00;
+  margin-top: 2px;
+}
+
+.import-info-text {
+  flex: 1;
+}
+
+.import-info-title {
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.import-info-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  color: #333;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.import-info-list li {
+  margin-bottom: 6px;
+  padding-left: 24px;
+  position: relative;
+}
+
+.import-info-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #f57c00;
+  font-weight: bold;
+}
+
+/* File Upload Areas */
+.import-file-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.import-file-section {
+  border: 2px dashed #424242;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: pointer;
+  background: #1a2332;
+}
+
+.import-file-section:hover {
+  border-color: #00a8ff;
+  background: #1a2332;
+}
+
+.import-file-section.has-file {
+  border-style: solid;
+  border-color: #4caf50;
+  background: #1a2e1a;
+}
+
+.import-file-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  color: #999;
+  transition: color 0.2s;
+}
+
+.import-file-section:hover .import-file-icon {
+  color: #00bcd4;
+}
+
+.import-file-section.has-file .import-file-icon {
+  color: #4caf50;
+}
+
+.import-file-label {
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.import-file-hint {
+  font-size: 14px;
+  color: #b0b0b0;
+  margin-bottom: 8px;
+}
+
+.import-file-name {
+  font-size: 13px;
+  color: #4caf50;
+  font-weight: 600;
+  margin-top: 8px;
+  word-break: break-all;
+}
+
+/* Verbesserte Info-Box */
+.import-info-box {
+  background: rgba(33, 150, 243, 0.1);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.import-info-title {
+  color: #1a1a1a;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.import-info-list {
+  color: #1a1a1a;
+  font-size: 15px;
+}
+
+/* Dark Theme Override für bessere Lesbarkeit */
+.import-info-box {
+  background: #fff3e0 !important;
+  border-color: #ffb74d !important;
+}
+
+.import-info-icon {
+  color: #f57c00 !important;
+}
+
+.import-info-title {
+  color: #1a1a1a !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+}
+
+.import-info-list {
+  color: #333 !important;
+  font-size: 15px !important;
+  line-height: 1.8 !important;
+}
+
+.import-info-list li {
+  margin-bottom: 6px;
+}
+
+.import-info-list strong {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Actions - Korrigierte Button Styles */
+.import-dialog-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #334155;
+  background: #0f172a;
+}
+
+.import-cancel-button,
+.import-submit-button {
+  flex: 1;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.import-cancel-button {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.import-cancel-button:hover:not(:disabled) {
+  background: #475569;
+  color: #f1f5f9;
+}
+
+.import-submit-button {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+}
+
+.import-submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+}
+
+.import-submit-button:disabled,
+.import-cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.import-loading {
+  text-align: center;
+  padding: 60px 24px;
+}
+
+.import-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #334155;
+  border-top-color: #0ea5e9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.import-loading-text {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .import-dialog-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  
+  .import-cancel-button,
+  .import-submit-button {
+    width: 100%;
+  }
+}
+
+/* Actions - Korrigierte Button Styles */
+.import-dialog-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #334155;
+  background: #0f172a;
+}
+
+.import-cancel-button,
+.import-submit-button {
+  flex: 1;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.import-cancel-button {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.import-cancel-button:hover:not(:disabled) {
+  background: #475569;
+  color: #f1f5f9;
+}
+
+.import-submit-button {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+}
+
+.import-submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+}
+
+.import-submit-button:disabled,
+.import-cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.import-loading {
+  text-align: center;
+  padding: 60px 24px;
+}
+
+.import-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #334155;
+  border-top-color: #0ea5e9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.import-loading-text {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .import-dialog-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  
+  .import-cancel-button,
+  .import-submit-button {
+    width: 100%;
+  }
+}

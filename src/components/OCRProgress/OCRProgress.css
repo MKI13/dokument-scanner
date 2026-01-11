@@ -1,0 +1,47 @@
+.ocr-progress {
+  background: #1e293b;
+  border: 2px solid #334155;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-status {
+  font-weight: 600;
+  color: #cbd5e1;
+  font-size: 15px;
+}
+
+.progress-percentage {
+  font-weight: 700;
+  color: #0ea5e9;
+  font-size: 18px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #0f172a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progress-message {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #94a3b8;
+  text-align: center;
+}
