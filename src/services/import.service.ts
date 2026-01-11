@@ -10,103 +10,176 @@ class ImportService {
       const data = JSON.parse(jsonString);
       const documents = Array.isArray(data) ? data : [data];
 
-      console.log(`📦 IMPORTIERE ${documents.length} DOKUMENTE`);
+      console.log(`\n========================================`);
+      console.log(`📦 IMPORT START: ${documents.length} Dokumente`);
+      console.log(`========================================\n`);
 
       for (let i = 0; i < documents.length; i++) {
-        const doc = documents[i];
+        const rawDoc = documents[i];
+        
+        console.log(`\n--- Dokument ${i + 1}/${documents.length} ---`);
+        console.log(`📄 Dateiname: ${rawDoc.filename}`);
         
         try {
-          console.log(`📄 Dokument ${i + 1}/${documents.length}: ${doc.filename}`);
+          // SCHRITT 1: Zeige Original-Daten
+          console.log('📥 IMPORT-DATEN:', {
+            filename: typeof rawDoc.filename,
+            blob: typeof rawDoc.blob,
+            uploadDate: typeof rawDoc.uploadDate,
+            fileHash: typeof rawDoc.fileHash
+          });
+
+          // SCHRITT 2: Validiere und konvertiere
+          const validDoc = await this.validateAndConvertDocument(rawDoc);
           
-          // Validiere und konvertiere Dokument
-          const validDoc = await this.validateAndConvertDocument(doc);
-          
-          if (validDoc) {
-            // WICHTIG: Verwende put statt add um Dexie-Fehler zu vermeiden
-            await db.documents.put(validDoc);
-            console.log(`✅ Importiert: ${doc.filename}`);
-            success++;
-          } else {
-            console.warn(`⚠️  Übersprungen (ungültig): ${doc.filename}`);
+          if (!validDoc) {
+            console.error('❌ VALIDIERUNG FEHLGESCHLAGEN');
             errors++;
+            continue;
           }
+
+          console.log('✅ VALIDIERT:', {
+            filename: validDoc.filename,
+            blobSize: validDoc.blob.size,
+            uploadDate: validDoc.uploadDate,
+            fileHash: validDoc.fileHash
+          });
+
+          // SCHRITT 3: In DB einfügen (OHNE ID!)
+          console.log('💾 FÜGE IN DB EIN...');
+          
+          const insertData = {
+            filename: validDoc.filename,
+            blob: validDoc.blob,
+            uploadDate: validDoc.uploadDate,
+            fileHash: validDoc.fileHash,
+            customer: validDoc.customer,
+            amount: validDoc.amount,
+            invoiceNumber: validDoc.invoiceNumber,
+            date: validDoc.date,
+            ocrText: validDoc.ocrText,
+            tags: validDoc.tags
+          };
+
+          // VERWENDE ADD NICHT PUT - Dexie soll neue ID generieren
+          const id = await db.documents.add(insertData);
+          
+          console.log(`✅ ERFOLGREICH EINGEFÜGT (ID: ${id})`);
+          success++;
+          
         } catch (error: any) {
-          console.error(`❌ Fehler bei ${doc.filename}:`, error.message || error);
+          console.error('❌ FEHLER:', error);
+          console.error('Stack:', error.stack);
+          console.error('Dokument:', rawDoc);
           errors++;
         }
       }
 
-      console.log(`\n✅ Import abgeschlossen: ${success} erfolgreich, ${errors} Fehler`);
+      console.log(`\n========================================`);
+      console.log(`✅ IMPORT FERTIG`);
+      console.log(`   Erfolgreich: ${success}`);
+      console.log(`   Fehler: ${errors}`);
+      console.log(`========================================\n`);
+
       return { success, errors };
       
     } catch (error: any) {
-      console.error('❌ JSON Parse Fehler:', error);
-      throw new Error('Ungültiges JSON Format: ' + error.message);
+      console.error('❌ JSON PARSE FEHLER:', error);
+      throw new Error('Ungültiges JSON: ' + error.message);
     }
   }
 
   private async validateAndConvertDocument(doc: any): Promise<Omit<Document, 'id'> | null> {
     try {
-      // Prüfe Pflichtfelder
-      if (!doc.filename) {
-        console.error('Fehlendes Feld: filename');
+      // PFLICHTFELD: filename
+      if (!doc.filename || typeof doc.filename !== 'string') {
+        console.error('❌ filename fehlt oder ungültig:', doc.filename);
         return null;
       }
-      
-      if (!doc.fileHash) {
-        console.warn('Fehlendes Feld: fileHash - generiere neues');
+
+      // PFLICHTFELD: fileHash
+      if (!doc.fileHash || typeof doc.fileHash !== 'string') {
+        console.warn('⚠️  fileHash fehlt - generiere neu');
         doc.fileHash = this.generateHash(doc.filename + Date.now());
       }
 
-      // Konvertiere Blob
+      // PFLICHTFELD: blob
+      if (!doc.blob) {
+        console.error('❌ blob fehlt komplett');
+        return null;
+      }
+
       let blob: Blob;
-      
+
+      // BLOB KONVERTIERUNG
       if (doc.blob instanceof Blob) {
-        // Bereits ein Blob
+        console.log('✅ Blob bereits vorhanden');
         blob = doc.blob;
+        
       } else if (typeof doc.blob === 'string') {
-        // Base64 String
+        console.log('🔄 Konvertiere Base64 String zu Blob...');
+        
+        if (!doc.blob.startsWith('data:')) {
+          console.error('❌ Ungültiger Base64 String (fehlt data:)');
+          return null;
+        }
+
         try {
           const response = await fetch(doc.blob);
           blob = await response.blob();
+          console.log(`✅ Blob erstellt: ${blob.size} bytes, ${blob.type}`);
         } catch (e) {
-          console.error('Blob-Konvertierung fehlgeschlagen:', e);
+          console.error('❌ Base64 → Blob fehlgeschlagen:', e);
           return null;
         }
+        
       } else if (doc.blob?.data && Array.isArray(doc.blob.data)) {
-        // ArrayBuffer Format (von JSON)
+        console.log('🔄 Konvertiere ArrayBuffer zu Blob...');
+        
         const uint8Array = new Uint8Array(doc.blob.data);
         blob = new Blob([uint8Array], { type: doc.blob.type || 'image/jpeg' });
-      } else if (doc.blob?.type && doc.blob?.size) {
-        // Blob-ähnliches Objekt aus JSON
-        console.warn('Blob-Metadaten gefunden, aber keine Daten - überspringe');
-        return null;
+        console.log(`✅ Blob erstellt: ${blob.size} bytes`);
+        
       } else {
-        console.error('Unbekanntes Blob-Format:', typeof doc.blob);
+        console.error('❌ Unbekanntes Blob-Format:', {
+          type: typeof doc.blob,
+          hasData: !!doc.blob?.data,
+          keys: Object.keys(doc.blob || {})
+        });
         return null;
       }
 
-      // Validiere Blob
-      if (!blob || blob.size === 0) {
-        console.error('Leerer Blob');
+      // VALIDIERE BLOB
+      if (blob.size === 0) {
+        console.error('❌ Blob ist leer (0 bytes)');
         return null;
       }
 
-      // WICHTIG: Konvertiere Datumsfelder korrekt für Dexie
+      // PFLICHTFELD: uploadDate
       let uploadDate: Date;
       try {
-        uploadDate = doc.uploadDate instanceof Date 
-          ? doc.uploadDate 
-          : new Date(doc.uploadDate || Date.now());
-        
-        // Validiere Datum
+        if (!doc.uploadDate) {
+          console.warn('⚠️  uploadDate fehlt - verwende jetzt');
+          uploadDate = new Date();
+        } else if (doc.uploadDate instanceof Date) {
+          uploadDate = doc.uploadDate;
+        } else if (typeof doc.uploadDate === 'string' || typeof doc.uploadDate === 'number') {
+          uploadDate = new Date(doc.uploadDate);
+        } else {
+          console.warn('⚠️  Ungültiges uploadDate Format - verwende jetzt');
+          uploadDate = new Date();
+        }
+
         if (isNaN(uploadDate.getTime())) {
+          console.warn('⚠️  Ungültiges Datum - verwende jetzt');
           uploadDate = new Date();
         }
       } catch (e) {
+        console.warn('⚠️  Datum-Konvertierung fehlgeschlagen - verwende jetzt');
         uploadDate = new Date();
       }
 
+      // OPTIONALES FELD: date
       let date: Date | undefined = undefined;
       if (doc.date) {
         try {
@@ -119,15 +192,15 @@ class ImportService {
         }
       }
 
-      // Erstelle sauberes Dokument ohne ID
+      // ERSTELLE SAUBERES DOKUMENT
       const validDocument: Omit<Document, 'id'> = {
-        filename: String(doc.filename),
+        filename: String(doc.filename).trim(),
         blob: blob,
         uploadDate: uploadDate,
-        fileHash: String(doc.fileHash),
-        customer: doc.customer ? String(doc.customer) : undefined,
+        fileHash: String(doc.fileHash).trim(),
+        customer: doc.customer ? String(doc.customer).trim() : undefined,
         amount: doc.amount ? Number(doc.amount) : undefined,
-        invoiceNumber: doc.invoiceNumber ? String(doc.invoiceNumber) : undefined,
+        invoiceNumber: doc.invoiceNumber ? String(doc.invoiceNumber).trim() : undefined,
         date: date,
         ocrText: doc.ocrText ? String(doc.ocrText) : undefined,
         tags: Array.isArray(doc.tags) ? doc.tags : undefined
@@ -136,7 +209,8 @@ class ImportService {
       return validDocument;
       
     } catch (error: any) {
-      console.error('Validierung fehlgeschlagen:', error.message || error);
+      console.error('❌ VALIDIERUNG EXCEPTION:', error.message);
+      console.error('Stack:', error.stack);
       return null;
     }
   }
@@ -156,7 +230,6 @@ class ImportService {
     
     console.log(`📤 EXPORTIERE ${docs.length} DOKUMENTE`);
     
-    // Konvertiere Blobs zu Base64 für Export
     const exportDocs = await Promise.all(
       docs.map(async (doc) => {
         try {
@@ -174,16 +247,14 @@ class ImportService {
             tags: doc.tags
           };
         } catch (error) {
-          console.error('Fehler beim Exportieren von:', doc.filename, error);
+          console.error('Export-Fehler:', doc.filename, error);
           return null;
         }
       })
     );
 
-    // Filter null values
     const validExports = exportDocs.filter(d => d !== null);
-    
-    console.log(`✅ ${validExports.length} Dokumente exportiert`);
+    console.log(`✅ ${validExports.length} exportiert`);
     
     return JSON.stringify(validExports, null, 2);
   }
