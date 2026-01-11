@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
-import { FileUpload } from '../components/FileUpload/FileUpload';
-import { OCRProgress } from '../components/OCRProgress/OCRProgress';
+import React, { useState, useRef } from 'react';
+import { Camera, Upload as UploadIcon, RefreshCw } from 'lucide-react';
 import { documentService, ProcessingProgress } from '../services/document.service';
-import { duplicateService } from '../services/duplicate.service';
 import { modalService } from '../services/modal.service';
+import { duplicateDetectionService } from '../services/duplicate-detection.service';
 import './Upload.css';
 
 interface UploadProps {
   setSwipeEnabled: (enabled: boolean) => void;
-  onUploadComplete?: () => void;
 }
 
-export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled, onUploadComplete }) => {
+export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<ProcessingProgress>({
     status: 'idle',
@@ -19,23 +17,16 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled, onUploadComplet
     message: ''
   });
   const [processingFiles, setProcessingFiles] = useState({ current: 0, total: 0 });
-  const [duplicatesFound, setDuplicatesFound] = useState(0);
 
-  React.useEffect(() => {
-    setSwipeEnabled(!isProcessing);
-  }, [isProcessing, setSwipeEnabled]);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleFilesSelected = async (files: File[]) => {
     setIsProcessing(true);
     setProcessingFiles({ current: 0, total: files.length });
-    setDuplicatesFound(0);
 
     let successCount = 0;
     let errorCount = 0;
-    let dupCount = 0;
-
-    // Clear alte Duplikat-Markierungen
-    duplicateService.clearMarked();
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -43,7 +34,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled, onUploadComplet
         setProcessingFiles({ current: i + 1, total: files.length });
 
         try {
-          // SMART UPLOAD: Nicht blockieren bei Duplikaten!
           await documentService.processAndSaveDocument(
             file,
             (prog) => {
@@ -53,48 +43,46 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled, onUploadComplet
               });
             },
             async (warning) => {
-              // Markiere Duplikat, aber FAHRE FORT!
-              console.log('🔁 DUPLIKAT GEFUNDEN (nicht blockierend)');
-              dupCount++;
-              setDuplicatesFound(dupCount);
-              return true; // Immer weitermachen
+              // Duplikat-Warnung
+              return await modalService.confirm(
+                warning.message,
+                'Duplikat gefunden'
+              );
             },
             true
           );
 
           successCount++;
-          console.log('✅ DOKUMENT GESPEICHERT:', file.name);
-
         } catch (error: any) {
           if (error.message !== 'Upload abgebrochen - Duplikat') {
             errorCount++;
-            console.error('❌ FEHLER:', file.name, error);
+            console.error('Fehler:', error);
           }
         }
       }
 
-      // Zeige Ergebnis
       if (successCount > 0) {
-        let message = `${successCount} Dokument(e) erfolgreich hochgeladen!`;
-        
-        if (dupCount > 0) {
-          message += `\n\n⚠️ ${dupCount} Duplikat(e) erkannt.\nPrüfe den Duplikate-Tab!`;
-        }
-        
-        if (errorCount > 0) {
-          message += `\n\n❌ ${errorCount} Fehler`;
-        }
-
-        await modalService.success(message);
-        onUploadComplete?.();
+        await modalService.success(
+          `${successCount} Dokument(e) erfolgreich hochgeladen!`
+        );
       } else if (errorCount > 0) {
-        await modalService.error(`${errorCount} Dokument(e) konnten nicht verarbeitet werden`);
+        await modalService.error(
+          `${errorCount} Dokument(e) konnten nicht verarbeitet werden`
+        );
       }
 
     } finally {
       setIsProcessing(false);
       setProgress({ status: 'idle', progress: 0, message: '' });
       setProcessingFiles({ current: 0, total: 0 });
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      handleFilesSelected(Array.from(files));
+      event.target.value = '';
     }
   };
 
@@ -105,26 +93,70 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled, onUploadComplet
         <p>Fotografiere oder wähle Dokumente zum Hochladen</p>
       </div>
 
-      <FileUpload
-        onFilesSelected={handleFilesSelected}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
         disabled={isProcessing}
       />
 
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+        disabled={isProcessing}
+      />
+
+      <div className="file-upload">
+        <button
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={isProcessing}
+          className="upload-button camera"
+        >
+          <Camera size={32} />
+          <span>Kamera</span>
+        </button>
+
+        <button
+          onClick={() => galleryInputRef.current?.click()}
+          disabled={isProcessing}
+          className="upload-button gallery"
+        >
+          <UploadIcon size={32} />
+          <span>Galerie</span>
+        </button>
+      </div>
+
       {isProcessing && (
-        <>
-          <OCRProgress
-            progress={progress}
-            currentFile={processingFiles.current}
-            totalFiles={processingFiles.total}
-          />
-          
-          {duplicatesFound > 0 && (
-            <div className="duplicate-notice">
-              <span className="duplicate-notice-icon">🔁</span>
-              <span>{duplicatesFound} Duplikat(e) erkannt - Upload läuft weiter</span>
+        <div className="ocr-progress">
+          <div className="progress-header">
+            <span className="progress-status">
+              🔄 Datei {processingFiles.current}/{processingFiles.total}
+            </span>
+            <span className="progress-percentage">
+              {Math.round(progress.progress)}%
+            </span>
+          </div>
+
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${progress.progress}%` }}
+            />
+          </div>
+
+          {progress.message && (
+            <div className="progress-message">
+              {progress.message}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {!isProcessing && (
@@ -157,7 +189,7 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled, onUploadComplet
             <span className="info-icon">🔁</span>
             <div>
               <h3>Duplikat-Erkennung</h3>
-              <p>Automatische Erkennung identischer Dokumente</p>
+              <p>Warnung bei identischen Dokumenten</p>
             </div>
           </div>
         </div>

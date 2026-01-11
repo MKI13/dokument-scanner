@@ -1,0 +1,169 @@
+.duplicates-page {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #1e293b;
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.refresh-button:hover {
+  background: #0284c7;
+}
+
+.duplicates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.duplicate-group {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.duplicate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.duplicate-header h3 {
+  margin: 0;
+  color: #1e293b;
+}
+
+.btn-danger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.duplicate-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.duplicate-item {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  position: relative;
+}
+
+.duplicate-preview {
+  position: relative;
+  aspect-ratio: 1;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.duplicate-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.duplicate-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(14, 165, 233, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.duplicate-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.duplicate-info strong {
+  color: #1e293b;
+  font-size: 15px;
+}
+
+.btn-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: #dc2626;
+}
+
+.no-duplicates {
+  text-align: center;
+  padding: 80px 20px;
+  color: #64748b;
+}
+
+.no-duplicates svg {
+  margin-bottom: 20px;
+  color: #94a3b8;
+}
+
+.no-duplicates h2 {
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .duplicate-items {
+    grid-template-columns: 1fr;
+  }
+}

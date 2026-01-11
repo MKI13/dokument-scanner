@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Calendar, Users } from 'lucide-react';
+import { Upload as UploadIcon, FileText, Calendar, Users, Copy } from 'lucide-react';
+import { Upload } from './pages/Upload';
 import { AllDocuments } from './pages/AllDocuments';
+import { Calendar as CalendarPage } from './pages/Calendar';
+import { Customers } from './pages/Customers';
+import { Duplicates } from './pages/Duplicates';
 import './App.css';
 
-type Page = 'upload' | 'documents' | 'calendar' | 'customers';
+type Page = 'upload' | 'documents' | 'calendar' | 'customers' | 'duplicates';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('upload');
@@ -33,7 +37,7 @@ function App() {
     const isRightSwipe = distance < -minSwipeDistance;
 
     if (isLeftSwipe || isRightSwipe) {
-      const pages: Page[] = ['upload', 'documents', 'calendar', 'customers'];
+      const pages: Page[] = ['upload', 'documents', 'calendar', 'customers', 'duplicates'];
       const currentIndex = pages.indexOf(currentPage);
       
       if (isLeftSwipe && currentIndex < pages.length - 1) {
@@ -41,6 +45,27 @@ function App() {
       } else if (isRightSwipe && currentIndex > 0) {
         setCurrentPage(pages[currentIndex - 1]);
       }
+    }
+  };
+
+  const handleUploadComplete = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'upload':
+        return <Upload setSwipeEnabled={setSwipeEnabled} />;
+      case 'documents':
+        return <AllDocuments setSwipeEnabled={setSwipeEnabled} refreshTrigger={refreshTrigger} />;
+      case 'calendar':
+        return <CalendarPage setSwipeEnabled={setSwipeEnabled} />;
+      case 'customers':
+        return <Customers setSwipeEnabled={setSwipeEnabled} />;
+      case 'duplicates':
+        return <Duplicates setSwipeEnabled={setSwipeEnabled} />;
+      default:
+        return null;
     }
   };
 
@@ -61,7 +86,7 @@ function App() {
           className={`nav-button ${currentPage === 'upload' ? 'active' : ''}`}
           onClick={() => setCurrentPage('upload')}
         >
-          <Upload size={24} />
+          <UploadIcon size={24} />
         </button>
 
         <button
@@ -84,39 +109,17 @@ function App() {
         >
           <Users size={24} />
         </button>
+
+        <button
+          className={`nav-button ${currentPage === 'duplicates' ? 'active' : ''}`}
+          onClick={() => setCurrentPage('duplicates')}
+        >
+          <Copy size={24} />
+        </button>
       </nav>
 
       <main className="app-content">
-        {currentPage === 'upload' && (
-          <div className="placeholder-page">
-            <Upload size={64} />
-            <h2>Upload</h2>
-            <p>Wird geladen...</p>
-          </div>
-        )}
-
-        {currentPage === 'documents' && (
-          <AllDocuments 
-            setSwipeEnabled={setSwipeEnabled}
-            refreshTrigger={refreshTrigger}
-          />
-        )}
-
-        {currentPage === 'calendar' && (
-          <div className="placeholder-page">
-            <Calendar size={64} />
-            <h2>Kalender</h2>
-            <p>Kommt bald...</p>
-          </div>
-        )}
-
-        {currentPage === 'customers' && (
-          <div className="placeholder-page">
-            <Users size={64} />
-            <h2>Kunden</h2>
-            <p>Kommt bald...</p>
-          </div>
-        )}
+        {renderPage()}
       </main>
     </div>
   );
