@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload as UploadIcon, FolderOpen } from 'lucide-react';
+import { Camera, FolderOpen } from 'lucide-react';
 import { documentService, ProcessingProgress } from '../services/document.service';
 import { modalService } from '../services/modal.service';
 import './Upload.css';
@@ -84,15 +84,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
     }
   };
 
-  // Info-Karten Click Handler
-  const handleCameraInfoClick = () => {
-    cameraInputRef.current?.click();
-  };
-
-  const handleFileManagerClick = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleOCRInfoClick = async () => {
     await modalService.info(
       'OCR (Optical Character Recognition) erkennt automatisch:\n\n' +
@@ -135,11 +126,11 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
           disabled={isProcessing}
         />
 
-        {/* DATEIMANAGER INPUT - Alle Dateien, Mehrfachauswahl */}
+        {/* DATEIMANAGER INPUT - Direkter Dateizugriff ohne Galerie-Auswahl */}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,application/pdf"
+          accept="image/*,application/pdf,.jpg,.jpeg,.png,.gif,.webp,.pdf"
           multiple
           onChange={handleFileChange}
           style={{ display: 'none' }}
@@ -194,30 +185,6 @@ export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {
 
         {!isProcessing && (
           <div className="info-cards">
-            <button 
-              className="info-card clickable" 
-              onClick={handleCameraInfoClick}
-              disabled={isProcessing}
-            >
-              <div className="info-icon">📸</div>
-              <div className="info-text">
-                <h3>Kamera</h3>
-                <p>Fotografiere Dokumente direkt</p>
-              </div>
-            </button>
-
-            <button 
-              className="info-card clickable" 
-              onClick={handleFileManagerClick}
-              disabled={isProcessing}
-            >
-              <div className="info-icon">📁</div>
-              <div className="info-text">
-                <h3>Dateimanager</h3>
-                <p>Wähle Dateien aus allen Ordnern</p>
-              </div>
-            </button>
-
             <button 
               className="info-card clickable" 
               onClick={handleOCRInfoClick}
