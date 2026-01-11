@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
 import { modalService } from '../services/modal.service';
 import { Document } from '../types/document';
-import { RefreshCw, Trash2, AlertCircle } from 'lucide-react';
+import { RefreshCw, Trash2, AlertCircle, AlertTriangle } from 'lucide-react';
 import './Duplicates.css';
 
 interface DuplicateGroup {
@@ -102,6 +102,44 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
     }
   };
 
+  const handleDeleteAllDuplicates = async () => {
+    const totalDuplicates = groups.reduce((sum, g) => sum + g.documents.length - 1, 0);
+    
+    const confirmed = await modalService.confirm(
+      `⚠️ WARNUNG: Dies löscht ${totalDuplicates} doppelte Dokumente aus allen ${groups.length} Gruppen!\n\n` +
+      `Von jeder Gruppe wird nur die neueste Version behalten.\n\n` +
+      `Diese Aktion kann nicht rückgängig gemacht werden!`,
+      '🗑️ Alle Duplikate löschen'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      let deletedCount = 0;
+
+      for (const group of groups) {
+        const [newest, ...rest] = group.documents;
+        
+        for (const doc of rest) {
+          if (doc.id) {
+            await db.documents.delete(doc.id);
+            deletedCount++;
+          }
+        }
+      }
+
+      await modalService.success(
+        `✅ ${deletedCount} doppelte Dokumente gelöscht!\n\n` +
+        `${groups.length} eindeutige Dokumente behalten.`
+      );
+      
+      scanForDuplicates();
+    } catch (error) {
+      console.error('Fehler:', error);
+      await modalService.error('Fehler beim Löschen der Duplikate');
+    }
+  };
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleString('de-DE', {
       day: '2-digit',
@@ -130,10 +168,18 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
     <div className="page-container">
       <div className="page-header">
         <h1>🔁 Duplikate</h1>
-        <button onClick={scanForDuplicates} className="refresh-button">
-          <RefreshCw size={18} />
-          <span>Neu scannen</span>
-        </button>
+        <div className="header-actions">
+          <button onClick={scanForDuplicates} className="refresh-button">
+            <RefreshCw size={18} />
+            <span>Neu scannen</span>
+          </button>
+          {groups.length > 0 && (
+            <button onClick={handleDeleteAllDuplicates} className="delete-all-button">
+              <AlertTriangle size={18} />
+              <span>Alle Duplikate löschen</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="page-content">
@@ -144,7 +190,7 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
                 <span className="stat-value">{groups.length}</span>
                 <span className="stat-label">Duplikat-Gruppen</span>
               </div>
-              <div className="stat-item">
+              <div className="stat-item warning">
                 <span className="stat-value">
                   {groups.reduce((sum, g) => sum + g.documents.length - 1, 0)}
                 </span>
