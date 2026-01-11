@@ -1,123 +1,137 @@
 import { db } from './database.service';
-import JSZip from 'jszip';
 import { Document } from '../types/document';
 
-interface BackupMetadata {
-  version: string;
-  exportDate: string;
-  documents: Array<{
-    id?: number;
-    filename: string;
-    uploadDate: string;
-    documentDate: string;
-    customer: string | null;
-    amount: number | null;
-    extractedText: string | null;
-    ocrConfidence: number | null;
-    fileHash: string;
-  }>;
-}
-
 class ImportService {
-  
-  async importFromBackup(jsonFile: File, zipFile: File): Promise<void> {
-    console.log('📦 STARTE IMPORT...');
-    console.log('  JSON:', jsonFile.name);
-    console.log('  ZIP:', zipFile.name);
+  async importFromJSON(jsonString: string): Promise<{ success: number; errors: number }> {
+    let success = 0;
+    let errors = 0;
 
     try {
-      // 1. Parse JSON Metadata
-      const jsonText = await jsonFile.text();
-      const metadata: BackupMetadata = JSON.parse(jsonText);
-      
-      console.log('📄 METADATA GELESEN:', metadata.documents.length, 'Dokumente');
+      const data = JSON.parse(jsonString);
+      const documents = Array.isArray(data) ? data : [data];
 
-      // 2. Lade ZIP
-      const zip = await JSZip.loadAsync(zipFile);
-      console.log('📦 ZIP GELADEN:', Object.keys(zip.files).length, 'Dateien');
-
-      // 3. Importiere jedes Dokument
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const docData of metadata.documents) {
+      for (const doc of documents) {
         try {
-          console.log('  → Importiere:', docData.filename);
-
-          // Finde Datei im ZIP
-          const zipEntry = zip.file(docData.filename);
+          // Validiere und konvertiere Dokument
+          const validDoc = await this.validateAndConvertDocument(doc);
           
-          if (!zipEntry) {
-            console.warn('    ⚠️ Nicht gefunden in ZIP:', docData.filename);
-            errorCount++;
-            continue;
+          if (validDoc) {
+            await db.documents.add(validDoc);
+            success++;
+          } else {
+            console.warn('Ungültiges Dokument übersprungen:', doc);
+            errors++;
           }
-
-          // Extrahiere Blob
-          const blob = await zipEntry.async('blob');
-          
-          // Erstelle Document Objekt
-          const document: Omit<Document, 'id'> = {
-            filename: docData.filename,
-            blob: blob,
-            uploadDate: new Date(docData.uploadDate),
-            documentDate: new Date(docData.documentDate),
-            customer: docData.customer,
-            amount: docData.amount,
-            extractedText: docData.extractedText,
-            ocrConfidence: docData.ocrConfidence,
-            fileHash: docData.fileHash
-          };
-
-          // Speichere in DB
-          await db.documents.add(document as Document);
-          
-          console.log('    ✅ Importiert');
-          successCount++;
-
         } catch (error) {
-          console.error('    ❌ Fehler bei', docData.filename, ':', error);
-          errorCount++;
+          console.error('Fehler beim Importieren von Dokument:', doc, error);
+          errors++;
         }
       }
 
-      console.log('✅ IMPORT ABGESCHLOSSEN');
-      console.log('  Erfolgreich:', successCount);
-      console.log('  Fehler:', errorCount);
-
-      if (errorCount > 0) {
-        throw new Error(`${errorCount} Dokument(e) konnten nicht importiert werden.`);
-      }
-
+      return { success, errors };
     } catch (error) {
-      console.error('❌ IMPORT FEHLER:', error);
-      throw error;
+      console.error('JSON Parse Fehler:', error);
+      throw new Error('Ungültiges JSON Format');
     }
   }
 
-  async validateBackupFiles(jsonFile: File, zipFile: File): Promise<boolean> {
+  private async validateAndConvertDocument(doc: any): Promise<Document | null> {
     try {
-      // Prüfe JSON
-      const jsonText = await jsonFile.text();
-      const metadata = JSON.parse(jsonText);
-      
-      if (!metadata.documents || !Array.isArray(metadata.documents)) {
-        throw new Error('Ungültige JSON-Struktur');
+      // Prüfe Pflichtfelder
+      if (!doc.filename || !doc.fileHash) {
+        console.warn('Fehlende Pflichtfelder:', doc);
+        return null;
       }
 
-      // Prüfe ZIP
-      const zip = await JSZip.loadAsync(zipFile);
+      // Konvertiere Blob
+      let blob: Blob;
       
-      if (Object.keys(zip.files).length === 0) {
-        throw new Error('ZIP-Datei ist leer');
+      if (doc.blob instanceof Blob) {
+        blob = doc.blob;
+      } else if (typeof doc.blob === 'string') {
+        // Base64 String zu Blob
+        try {
+          const byteString = atob(doc.blob.split(',')[1] || doc.blob);
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          blob = new Blob([ab], { type: 'image/jpeg' });
+        } catch (e) {
+          console.error('Blob Konvertierung fehlgeschlagen:', e);
+          return null;
+        }
+      } else if (doc.blob && doc.blob.data && Array.isArray(doc.blob.data)) {
+        // ArrayBuffer/Uint8Array Format
+        const uint8Array = new Uint8Array(doc.blob.data);
+        blob = new Blob([uint8Array], { type: doc.blob.type || 'image/jpeg' });
+      } else {
+        console.warn('Unbekanntes Blob-Format:', typeof doc.blob);
+        return null;
       }
 
-      return true;
+      // Validiere Blob
+      if (!blob || blob.size === 0) {
+        console.warn('Leerer oder ungültiger Blob');
+        return null;
+      }
 
+      // Konvertiere Datum
+      const uploadDate = doc.uploadDate instanceof Date 
+        ? doc.uploadDate 
+        : new Date(doc.uploadDate);
+
+      const date = doc.date 
+        ? (doc.date instanceof Date ? doc.date : new Date(doc.date))
+        : undefined;
+
+      // Erstelle gültiges Dokument
+      const validDocument: Document = {
+        filename: String(doc.filename),
+        blob: blob,
+        uploadDate: uploadDate,
+        fileHash: String(doc.fileHash),
+        customer: doc.customer ? String(doc.customer) : undefined,
+        amount: doc.amount ? Number(doc.amount) : undefined,
+        invoiceNumber: doc.invoiceNumber ? String(doc.invoiceNumber) : undefined,
+        date: date,
+        ocrText: doc.ocrText ? String(doc.ocrText) : undefined,
+        tags: Array.isArray(doc.tags) ? doc.tags : undefined
+      };
+
+      return validDocument;
     } catch (error) {
       console.error('Validierung fehlgeschlagen:', error);
-      return false;
+      return null;
     }
+  }
+
+  async exportToJSON(): Promise<string> {
+    const docs = await db.documents.toArray();
+    
+    // Konvertiere Blobs zu Base64 für Export
+    const exportDocs = await Promise.all(
+      docs.map(async (doc) => {
+        const blobBase64 = await this.blobToBase64(doc.blob);
+        return {
+          ...doc,
+          blob: blobBase64,
+          id: undefined // ID nicht exportieren
+        };
+      })
+    );
+
+    return JSON.stringify(exportDocs, null, 2);
+  }
+
+  private blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 }
 

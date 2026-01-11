@@ -1,83 +1,57 @@
-import { documentService } from './document.service';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
+import { db } from './database.service';
+import { importService } from './import.service';
 
-export class BackupService {
-  
-  // Erstelle vollständiges Backup
-  static async createFullBackup(): Promise<void> {
+class BackupService {
+  async createBackup(): Promise<Blob> {
+    const jsonString = await importService.exportToJSON();
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    return blob;
+  }
+
+  async restoreBackup(file: File): Promise<{ success: number; errors: number }> {
     try {
-      console.log('📦 Erstelle Backup...');
-      
-      const documents = await documentService.getAllDocuments();
-      
-      const backup = {
-        version: '1.0',
-        exportDate: new Date().toISOString(),
-        documentCount: documents.length,
-        documents: documents.map(doc => ({
-          id: doc.id,
-          filename: doc.filename,
-          originalFilename: doc.originalFilename,
-          fileType: doc.fileType,
-          fileSize: doc.fileSize,
-          uploadDate: doc.uploadDate,
-          documentDate: doc.documentDate,
-          customer: doc.customer,
-          amount: doc.amount,
-          extractedText: doc.extractedText,
-          ocrConfidence: doc.ocrConfidence,
-          month: doc.month,
-          year: doc.year
-        }))
-      };
-      
-      // Erstelle ZIP mit allen Daten
-      const zip = new JSZip();
-      
-      // Metadaten
-      zip.file('backup.json', JSON.stringify(backup, null, 2));
-      
-      // Alle Bilder
-      const imagesFolder = zip.folder('images');
-      for (const doc of documents) {
-        imagesFolder?.file(doc.filename, doc.blob);
-      }
-      
-      const zipBlob = await zip.generateAsync({ 
-        type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 9 }
-      });
-      
-      const timestamp = new Date().toISOString().split('T')[0];
-      saveAs(zipBlob, `DokumentScanner_Backup_${timestamp}.zip`);
-      
-      console.log('✅ Backup erstellt!');
-      
+      const text = await file.text();
+      const result = await importService.importFromJSON(text);
+      return result;
     } catch (error) {
-      console.error('Backup-Fehler:', error);
+      console.error('Backup Restore Fehler:', error);
       throw error;
     }
   }
-  
-  // Auto-Backup nach jedem Upload
-  static async autoBackup(): Promise<void> {
-    const lastBackup = localStorage.getItem('lastBackup');
-    const now = new Date();
-    
-    // Backup nur einmal pro Tag
-    if (lastBackup) {
-      const lastDate = new Date(lastBackup);
-      const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (diffDays < 1) {
-        console.log('⏭️ Backup bereits heute erstellt');
-        return;
-      }
+
+  async downloadBackup(): Promise<void> {
+    try {
+      const blob = await this.createBackup();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dokument-scanner-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download Fehler:', error);
+      throw error;
     }
+  }
+
+  async clearDatabase(): Promise<void> {
+    await db.documents.clear();
+  }
+
+  async getDatabaseStats(): Promise<{
+    totalDocuments: number;
+    totalSize: number;
+  }> {
+    const docs = await db.documents.toArray();
+    const totalSize = docs.reduce((sum, doc) => sum + doc.blob.size, 0);
     
-    await this.createFullBackup();
-    localStorage.setItem('lastBackup', now.toISOString());
+    return {
+      totalDocuments: docs.length,
+      totalSize
+    };
   }
 }
+
+export const backupService = new BackupService();
