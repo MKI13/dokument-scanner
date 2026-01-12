@@ -82,13 +82,13 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `dokumente-backup_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      await modalService.success('Backup exportiert!');
+      await modalService.success('✅ Backup exportiert!\n\nDie JSON-Datei wurde heruntergeladen.');
     } catch (error) {
       console.error('Export-Fehler:', error);
       await modalService.error('Export fehlgeschlagen');
@@ -107,10 +107,10 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
 
       // Frage nach ZIP-Datei
       const hasZip = await modalService.confirm(
-        'Hast du auch ein ZIP-Archiv mit den Bildern?\n\n' +
-        'Wähle "Bestätigen" um ZIP auszuwählen\n' +
-        'oder "Abbrechen" für nur JSON (Platzhalter-Bilder)',
-        '📦 Bilder-Archiv vorhanden?'
+        '📦 Hast du auch ein ZIP-Archiv mit den Bildern?\n\n' +
+        '✅ JA → Wähle ZIP-Datei mit Fotos\n' +
+        '❌ NEIN → Nur JSON (Platzhalter-Bilder)',
+        'Bilder-Archiv vorhanden?'
       );
 
       if (hasZip) {
@@ -145,14 +145,15 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       await modalService.success(
         `✅ Import abgeschlossen!\n\n` +
         `Erfolgreich: ${result.success}\n` +
-        `Fehler: ${result.errors}`
+        `Fehler: ${result.errors}\n\n` +
+        `${zipFile ? '📷 Bilder aus ZIP geladen' : '🖼️ Platzhalter erstellt'}`
       );
       
       loadDocuments();
       
     } catch (error: any) {
       console.error('Import-Fehler:', error);
-      await modalService.error(`Import fehlgeschlagen:\n${error.message}`);
+      await modalService.error(`Import fehlgeschlagen:\n\n${error.message}`);
     }
   };
 
@@ -170,13 +171,25 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       <div className="page-header">
         <h1>📚 Alle Dokumente</h1>
         <div className="header-actions">
-          <button onClick={loadDocuments} className="icon-button" title="Neu laden">
+          <button 
+            onClick={loadDocuments} 
+            className="icon-button" 
+            title="Neu laden"
+          >
             <RefreshCw size={20} />
           </button>
-          <button onClick={handleImport} className="icon-button" title="Import">
+          <button 
+            onClick={handleImport} 
+            className="icon-button" 
+            title="Import (JSON + ZIP)"
+          >
             <Upload size={20} />
           </button>
-          <button onClick={handleExport} className="icon-button" title="Export">
+          <button 
+            onClick={handleExport} 
+            className="icon-button" 
+            title="Export (JSON)"
+          >
             <Download size={20} />
           </button>
         </div>
@@ -193,7 +206,12 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       </div>
 
       <div className="stats-bar">
-        <span>{filteredDocs.length} von {documents.length} Dokumenten</span>
+        <span>
+          {filteredDocs.length === documents.length 
+            ? `${documents.length} Dokumente` 
+            : `${filteredDocs.length} von ${documents.length} Dokumenten`
+          }
+        </span>
       </div>
 
       <div className="page-content">
@@ -214,7 +232,10 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                 </div>
                 {doc.id && (
                   <button
-                    onClick={() => handleDelete(doc)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(doc);
+                    }}
                     className="delete-button"
                     title="Löschen"
                   >
@@ -226,7 +247,9 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
           </div>
         ) : (
           <div className="no-documents">
-            <p>Keine Dokumente gefunden</p>
+            <p>
+              {searchQuery ? 'Keine Dokumente gefunden' : 'Noch keine Dokumente vorhanden'}
+            </p>
           </div>
         )}
       </div>
