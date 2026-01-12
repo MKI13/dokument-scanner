@@ -13,7 +13,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 16px 20px;
   background: #1e293b;
   border-bottom: 2px solid #334155;
 }
@@ -26,70 +26,55 @@
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  flex-direction: row-reverse; /* RECHTS → LINKS */
 }
 
 /* ============================================
-   BUTTONS MIT FARBEN
+   BUTTONS - DEZENT & KOMPAKT
    ============================================ */
 
 .icon-button {
-  background: #334155;
-  border: 2px solid #475569;
-  border-radius: 10px;
-  padding: 12px;
+  background: transparent;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 8px;
   cursor: pointer;
-  color: #cbd5e1;
+  color: #94a3b8;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 36px;
+  min-height: 36px;
 }
 
 .icon-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: #334155;
+  border-color: #64748b;
+  color: #cbd5e1;
 }
 
 .icon-button:active {
-  transform: translateY(0);
+  transform: scale(0.95);
 }
 
-/* AKTUALISIEREN - BLAU */
-.icon-button.refresh {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-  border-color: #0ea5e9;
-  color: white;
-}
-
+/* Refresh */
 .icon-button.refresh:hover {
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+  color: #0ea5e9;
+  border-color: #0ea5e9;
 }
 
-/* IMPORT - GRÜN */
-.icon-button.import {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-color: #10b981;
-  color: white;
-}
-
+/* Import */
 .icon-button.import:hover {
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  color: #10b981;
+  border-color: #10b981;
 }
 
-/* EXPORT - ORANGE */
-.icon-button.export {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  border-color: #f59e0b;
-  color: white;
-}
-
+/* Export */
 .icon-button.export:hover {
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+  border-color: #f59e0b;
 }
 
 /* ============================================
@@ -294,9 +279,7 @@
 
 @media (max-width: 768px) {
   .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    padding: 12px 16px;
   }
 
   .page-header h1 {
@@ -304,9 +287,13 @@
   }
 
   .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-direction: row-reverse;
+    gap: 6px;
+  }
+
+  .icon-button {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 6px;
   }
 
   .documents-grid {
@@ -326,16 +313,15 @@
     padding: 10px 12px;
     font-size: 13px;
   }
-
-  .icon-button {
-    min-width: 40px;
-    min-height: 40px;
-    padding: 10px;
-  }
 }
 
 @media (max-width: 480px) {
   .documents-grid {
     grid-template-columns: 1fr;
+  }
+
+  .icon-button svg {
+    width: 18px;
+    height: 18px;
   }
 }

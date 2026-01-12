@@ -168,27 +168,26 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       <div className="page-header">
         <h1>📚 Alle Dokumente</h1>
         <div className="header-actions">
-          {/* RECHTS → LINKS: Export, Import, Aktualisieren */}
-          <button 
-            onClick={handleExport} 
-            className="icon-button export" 
-            title="Export (JSON)"
-          >
-            <Download size={22} />
-          </button>
-          <button 
-            onClick={handleImport} 
-            className="icon-button import" 
-            title="Import (JSON + ZIP)"
-          >
-            <Upload size={22} />
-          </button>
           <button 
             onClick={loadDocuments} 
             className="icon-button refresh" 
             title="Aktualisieren"
           >
-            <RefreshCw size={22} />
+            <RefreshCw size={20} />
+          </button>
+          <button 
+            onClick={handleImport} 
+            className="icon-button import" 
+            title="Import"
+          >
+            <Upload size={20} />
+          </button>
+          <button 
+            onClick={handleExport} 
+            className="icon-button export" 
+            title="Export"
+          >
+            <Download size={20} />
           </button>
         </div>
       </div>
@@ -218,7 +217,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
             {filteredDocs.map((doc) => (
               <div key={doc.id} className="document-card">
                 <div className="document-preview">
-                  <img src={URL.createObjectURL(doc.blob)} alt={doc.filename} />
+                  <img src={URL.createObjectObject(doc.blob)} alt={doc.filename} />
                 </div>
                 <div className="document-info">
                   <h3>{doc.filename}</h3>
