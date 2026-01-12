@@ -217,7 +217,14 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
             {filteredDocs.map((doc) => (
               <div key={doc.id} className="document-card">
                 <div className="document-preview">
-                  <img src={URL.createObjectObject(doc.blob)} alt={doc.filename} />
+                  <img 
+                    src={URL.createObjectURL(doc.blob)} 
+                    alt={doc.filename}
+                    onError={(e) => {
+                      console.error('Bild-Ladefehler:', doc.filename);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 </div>
                 <div className="document-info">
                   <h3>{doc.filename}</h3>
