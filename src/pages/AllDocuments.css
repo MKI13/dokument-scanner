@@ -28,53 +28,68 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-direction: row-reverse; /* RECHTS → LINKS */
 }
 
 /* ============================================
-   BUTTONS
+   BUTTONS MIT FARBEN
    ============================================ */
 
 .icon-button {
   background: #334155;
   border: 2px solid #475569;
   border-radius: 10px;
-  padding: 10px;
+  padding: 12px;
   cursor: pointer;
   color: #cbd5e1;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .icon-button:hover {
-  background: #475569;
-  border-color: #0ea5e9;
-  color: #0ea5e9;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .icon-button:active {
   transform: translateY(0);
 }
 
-.refresh-button {
+/* AKTUALISIEREN - BLAU */
+.icon-button.refresh {
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-  border: none;
-  border-radius: 10px;
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
+  border-color: #0ea5e9;
   color: white;
-  font-weight: 600;
-  transition: all 0.2s;
 }
 
-.refresh-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(14, 165, 233, 0.3);
+.icon-button.refresh:hover {
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+/* IMPORT - GRÜN */
+.icon-button.import {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: #10b981;
+  color: white;
+}
+
+.icon-button.import:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* EXPORT - ORANGE */
+.icon-button.export {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: #f59e0b;
+  color: white;
+}
+
+.icon-button.export:hover {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
 /* ============================================
@@ -200,10 +215,10 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(239, 68, 68, 0.9);
+  background: rgba(239, 68, 68, 0.95);
   border: none;
   border-radius: 8px;
-  padding: 8px;
+  padding: 10px;
   color: white;
   cursor: pointer;
   display: flex;
@@ -211,6 +226,7 @@
   justify-content: center;
   transition: all 0.2s;
   opacity: 0;
+  backdrop-filter: blur(4px);
 }
 
 .document-card:hover .delete-button {
@@ -289,7 +305,8 @@
 
   .header-actions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    flex-direction: row-reverse;
   }
 
   .documents-grid {
@@ -309,14 +326,16 @@
     padding: 10px 12px;
     font-size: 13px;
   }
+
+  .icon-button {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 10px;
+  }
 }
 
 @media (max-width: 480px) {
   .documents-grid {
     grid-template-columns: 1fr;
-  }
-
-  .icon-button {
-    padding: 8px;
   }
 }

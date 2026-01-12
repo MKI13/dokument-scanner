@@ -105,7 +105,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       const jsonFile = e.target.files?.[0];
       if (!jsonFile) return;
 
-      // Frage nach ZIP-Datei
       const hasZip = await modalService.confirm(
         '📦 Hast du auch ein ZIP-Archiv mit den Bildern?\n\n' +
         '✅ JA → Wähle ZIP-Datei mit Fotos\n' +
@@ -114,7 +113,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       );
 
       if (hasZip) {
-        // Zweiter File-Input für ZIP
         const zipInput = document.createElement('input');
         zipInput.type = 'file';
         zipInput.accept = '.zip';
@@ -126,7 +124,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
         
         zipInput.click();
       } else {
-        // Nur JSON
         await performImport(jsonFile);
       }
     };
@@ -171,26 +168,27 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       <div className="page-header">
         <h1>📚 Alle Dokumente</h1>
         <div className="header-actions">
+          {/* RECHTS → LINKS: Export, Import, Aktualisieren */}
           <button 
-            onClick={loadDocuments} 
-            className="icon-button" 
-            title="Neu laden"
+            onClick={handleExport} 
+            className="icon-button export" 
+            title="Export (JSON)"
           >
-            <RefreshCw size={20} />
+            <Download size={22} />
           </button>
           <button 
             onClick={handleImport} 
-            className="icon-button" 
+            className="icon-button import" 
             title="Import (JSON + ZIP)"
           >
-            <Upload size={20} />
+            <Upload size={22} />
           </button>
           <button 
-            onClick={handleExport} 
-            className="icon-button" 
-            title="Export (JSON)"
+            onClick={loadDocuments} 
+            className="icon-button refresh" 
+            title="Aktualisieren"
           >
-            <Download size={20} />
+            <RefreshCw size={22} />
           </button>
         </div>
       </div>
