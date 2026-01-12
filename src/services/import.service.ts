@@ -1,5 +1,6 @@
 import { db } from './database.service';
 import { Document } from '../types/document';
+import JSZip from 'jszip';
 
 interface BackupDocument {
   id?: number;
@@ -15,10 +16,6 @@ interface BackupDocument {
   ocrConfidence?: number;
   month?: number;
   year?: number;
-  // Bild-Daten (verschiedene Formate)
-  blob?: any;
-  imageData?: string;
-  base64?: string;
 }
 
 interface BackupFile {
@@ -29,51 +26,90 @@ interface BackupFile {
 }
 
 class ImportService {
+  
   // ============================================
-  // HAUPT-IMPORT FUNKTION
+  // HAUPT-IMPORT: JSON + ZIP KOMBINIERT
   // ============================================
-  async importFromJSON(jsonString: string): Promise<{ success: number; errors: number }> {
-    let success = 0;
-    let errors = 0;
+  async importFromBackup(jsonFile: File, zipFile?: File): Promise<{ success: number; errors: number }> {
+    console.log('========================================');
+    console.log('📦 BACKUP-IMPORT GESTARTET');
+    console.log('========================================');
+    console.log('JSON-Datei:', jsonFile.name);
+    console.log('ZIP-Datei:', zipFile ? zipFile.name : 'keine');
+    console.log('');
 
     try {
-      const data: BackupFile | BackupDocument[] = JSON.parse(jsonString);
+      // 1. Lade JSON-Datenbank
+      const jsonText = await jsonFile.text();
+      const backupData: BackupFile | BackupDocument[] = JSON.parse(jsonText);
       
-      // Extrahiere documents Array
       let documents: BackupDocument[];
-      if (Array.isArray(data)) {
-        console.log('📦 Import: Array-Format');
-        documents = data;
-      } else if (data.documents && Array.isArray(data.documents)) {
-        console.log('📦 Import: Backup-Format');
-        console.log(`   Version: ${data.version || 'unbekannt'}`);
-        console.log(`   Export-Datum: ${data.exportDate || 'unbekannt'}`);
-        console.log(`   Dokumente: ${data.documentCount || documents.length}`);
-        documents = data.documents;
+      if (Array.isArray(backupData)) {
+        documents = backupData;
+      } else if (backupData.documents) {
+        documents = backupData.documents;
+        console.log('📊 Backup Version:', backupData.version);
+        console.log('📅 Export-Datum:', backupData.exportDate);
+        console.log('📄 Dokumente:', backupData.documentCount);
       } else {
-        throw new Error('Ungültiges Backup-Format');
+        throw new Error('Ungültiges JSON-Format');
       }
 
-      console.log(`\n========================================`);
-      console.log(`📥 IMPORT START: ${documents.length} Dokumente`);
-      console.log(`========================================\n`);
+      console.log(`\n✅ ${documents.length} Dokumente in JSON gefunden\n`);
 
-      // Importiere jedes Dokument
+      // 2. Lade ZIP-Archiv (falls vorhanden)
+      let imageMap = new Map<string, Blob>();
+      
+      if (zipFile) {
+        console.log('📦 LADE ZIP-ARCHIV...');
+        imageMap = await this.loadImagesFromZip(zipFile);
+        console.log(`✅ ${imageMap.size} Bilder aus ZIP geladen\n`);
+      } else {
+        console.warn('⚠️  Kein ZIP-Archiv angegeben');
+        console.warn('   → Erstelle Platzhalter-Bilder\n');
+      }
+
+      // 3. Importiere Dokumente
+      let success = 0;
+      let errors = 0;
+
+      console.log('========================================');
+      console.log('💾 IMPORTIERE DOKUMENTE');
+      console.log('========================================\n');
+
       for (let i = 0; i < documents.length; i++) {
-        const backupDoc = documents[i];
+        const doc = documents[i];
         
-        console.log(`\n[${i + 1}/${documents.length}] ${backupDoc.filename}`);
+        console.log(`[${i + 1}/${documents.length}] ${doc.filename}`);
         
         try {
-          // WICHTIG: Prüfe ob Bild-Daten vorhanden
-          if (!backupDoc.blob && !backupDoc.imageData && !backupDoc.base64) {
-            console.warn('  ⚠️  Kein Bild im Backup gefunden');
-            console.warn('  → Erstelle Platzhalter-Bild mit Metadaten');
-            backupDoc.blob = this.createPlaceholderBlob(backupDoc);
+          // Suche passendes Bild im ZIP
+          let blob: Blob | null = null;
+          
+          // Versuche verschiedene Dateinamen-Varianten
+          const possibleNames = [
+            doc.filename,
+            doc.originalFilename,
+            doc.filename.replace('.jpg', ''),
+            doc.originalFilename?.replace('.jpg', '')
+          ].filter(Boolean);
+
+          for (const name of possibleNames) {
+            if (name && imageMap.has(name)) {
+              blob = imageMap.get(name)!;
+              console.log(`  ✅ Bild gefunden: ${name} (${blob.size} bytes)`);
+              break;
+            }
           }
 
-          // Konvertiere zu Document-Format
-          const validDoc = await this.convertBackupDocument(backupDoc);
+          // Falls kein Bild gefunden → Platzhalter
+          if (!blob) {
+            console.log('  ⚠️  Kein Bild gefunden → Platzhalter');
+            blob = this.createPlaceholderBlob(doc);
+          }
+
+          // Konvertiere zu Document
+          const validDoc = await this.convertToDocument(doc, blob);
           
           if (!validDoc) {
             console.error('  ❌ Konvertierung fehlgeschlagen');
@@ -81,90 +117,122 @@ class ImportService {
             continue;
           }
 
-          // Füge in Datenbank ein
-          console.log('  💾 Füge in DB ein...');
+          // Speichere in DB
           const id = await db.documents.add(validDoc);
-          
-          console.log(`  ✅ Gespeichert (ID: ${id})`);
+          console.log(`  ✅ Gespeichert (ID: ${id})\n`);
           success++;
           
         } catch (error: any) {
-          console.error(`  ❌ Fehler: ${error.message}`);
-          console.error('     Stack:', error.stack);
+          console.error(`  ❌ Fehler: ${error.message}\n`);
           errors++;
         }
       }
 
-      console.log(`\n========================================`);
-      console.log(`✅ IMPORT ABGESCHLOSSEN`);
+      console.log('========================================');
+      console.log('✅ IMPORT ABGESCHLOSSEN');
       console.log(`   Erfolgreich: ${success}`);
       console.log(`   Fehler: ${errors}`);
-      console.log(`========================================\n`);
+      console.log('========================================\n');
 
       return { success, errors };
       
     } catch (error: any) {
-      console.error('❌ JSON PARSE FEHLER:', error.message);
-      throw new Error('Ungültiges JSON Format: ' + error.message);
+      console.error('❌ IMPORT FEHLER:', error.message);
+      throw error;
     }
+  }
+
+  // ============================================
+  // LADE BILDER AUS ZIP
+  // ============================================
+  private async loadImagesFromZip(zipFile: File): Promise<Map<string, Blob>> {
+    const imageMap = new Map<string, Blob>();
+    
+    try {
+      const zip = await JSZip.loadAsync(zipFile);
+      
+      // Durchsuche alle Dateien im ZIP
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+      
+      for (const [path, file] of Object.entries(zip.files)) {
+        // Ignoriere Ordner
+        if (file.dir) continue;
+        
+        // Prüfe ob Bild-Datei
+        const isImage = imageExtensions.some(ext => 
+          path.toLowerCase().endsWith(ext)
+        );
+        
+        if (isImage) {
+          try {
+            const blob = await file.async('blob');
+            
+            // Speichere mit verschiedenen Keys (mit/ohne Pfad)
+            const filename = path.split('/').pop() || path;
+            
+            imageMap.set(filename, blob);
+            imageMap.set(path, blob);
+            
+            // Auch ohne Extension
+            const nameWithoutExt = filename.replace(/\.[^.]+$/, '');
+            imageMap.set(nameWithoutExt, blob);
+            
+            console.log(`  📷 ${filename} (${blob.size} bytes)`);
+            
+          } catch (error) {
+            console.error(`  ⚠️  Fehler beim Laden: ${path}`);
+          }
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('❌ ZIP-Fehler:', error.message);
+      throw new Error('ZIP-Archiv konnte nicht geladen werden');
+    }
+    
+    return imageMap;
   }
 
   // ============================================
   // ERSTELLE PLATZHALTER-BILD
   // ============================================
   private createPlaceholderBlob(doc: BackupDocument): Blob {
-    // Erstelle SVG mit Dokumenten-Informationen
     const svg = `
       <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
-        <!-- Hintergrund -->
         <rect width="600" height="400" fill="#1e293b"/>
         
-        <!-- Icon -->
         <text x="300" y="80" font-family="Arial" font-size="48" fill="#64748b" text-anchor="middle">
           📄
         </text>
         
-        <!-- Dateiname -->
         <text x="300" y="130" font-family="Arial" font-size="18" fill="#f1f5f9" text-anchor="middle" font-weight="bold">
           ${this.escapeXml(doc.filename)}
         </text>
         
-        <!-- Info: Kein Bild -->
         <text x="300" y="160" font-family="Arial" font-size="14" fill="#94a3b8" text-anchor="middle">
-          Kein Bild im Backup vorhanden
+          Bild nicht im ZIP gefunden
         </text>
         
-        <!-- Kunde -->
         ${doc.customer ? `
           <text x="300" y="200" font-family="Arial" font-size="16" fill="#cbd5e1" text-anchor="middle">
             👤 ${this.escapeXml(doc.customer)}
           </text>
         ` : ''}
         
-        <!-- Betrag -->
         ${doc.amount ? `
           <text x="300" y="230" font-family="Arial" font-size="16" fill="#10b981" text-anchor="middle">
             💰 ${doc.amount.toFixed(2)} EUR
           </text>
         ` : ''}
         
-        <!-- Datum -->
         ${doc.documentDate ? `
           <text x="300" y="260" font-family="Arial" font-size="14" fill="#94a3b8" text-anchor="middle">
             📅 ${new Date(doc.documentDate).toLocaleDateString('de-DE')}
           </text>
         ` : ''}
         
-        <!-- OCR Text (erste Zeile) -->
-        ${doc.extractedText ? `
-          <text x="300" y="310" font-family="monospace" font-size="10" fill="#64748b" text-anchor="middle">
-            OCR: ${this.escapeXml(doc.extractedText.substring(0, 50))}...
-          </text>
-        ` : ''}
-        
-        <!-- Footer -->
         <text x="300" y="370" font-family="Arial" font-size="11" fill="#475569" text-anchor="middle">
-          Platzhalter - Original-Bild nicht im Backup enthalten
+          Platzhalter - Bild fehlt im ZIP-Archiv
         </text>
       </svg>
     `;
@@ -173,80 +241,24 @@ class ImportService {
   }
 
   // ============================================
-  // KONVERTIERE BACKUP → DOCUMENT
+  // KONVERTIERE ZU DOCUMENT
   // ============================================
-  private async convertBackupDocument(backupDoc: BackupDocument): Promise<Omit<Document, 'id'> | null> {
+  private async convertToDocument(
+    backupDoc: BackupDocument, 
+    blob: Blob
+  ): Promise<Omit<Document, 'id'> | null> {
     try {
-      let blob: Blob;
-      
-      // BLOB KONVERTIERUNG
-      if (backupDoc.blob instanceof Blob) {
-        // Bereits ein Blob
-        blob = backupDoc.blob;
-        console.log(`  📦 Blob: ${blob.size} bytes (${blob.type})`);
-        
-      } else if (backupDoc.imageData || backupDoc.base64) {
-        // Base64 String
-        console.log('  🔄 Konvertiere Base64 → Blob...');
-        const base64 = backupDoc.imageData || backupDoc.base64;
-        
-        if (!base64) {
-          console.error('  ❌ Base64 String ist leer');
-          return null;
-        }
-        
-        try {
-          const response = await fetch(base64);
-          blob = await response.blob();
-          console.log(`  ✅ Blob erstellt: ${blob.size} bytes`);
-        } catch (e) {
-          console.error('  ❌ Base64-Konvertierung fehlgeschlagen:', e);
-          return null;
-        }
-        
-      } else if (typeof backupDoc.blob === 'string') {
-        // String → Blob
-        console.log('  🔄 Konvertiere String → Blob...');
-        const response = await fetch(backupDoc.blob);
-        blob = await response.blob();
-        console.log(`  ✅ Blob erstellt: ${blob.size} bytes`);
-        
-      } else {
-        console.error('  ❌ Unbekanntes Blob-Format:', typeof backupDoc.blob);
-        return null;
-      }
-
       // Validiere Blob
       if (!blob || blob.size === 0) {
-        console.error('  ❌ Blob ist leer (0 bytes)');
+        console.error('  ❌ Blob ist leer');
         return null;
       }
 
-      // DATUM KONVERTIERUNG
-      let uploadDate: Date;
-      try {
-        uploadDate = new Date(backupDoc.uploadDate);
-        if (isNaN(uploadDate.getTime())) {
-          console.warn('  ⚠️  Ungültiges Upload-Datum → verwende jetzt');
-          uploadDate = new Date();
-        }
-      } catch (e) {
-        uploadDate = new Date();
-      }
+      // Konvertiere Datum
+      const uploadDate = new Date(backupDoc.uploadDate);
+      const date = backupDoc.documentDate ? new Date(backupDoc.documentDate) : undefined;
 
-      let date: Date | undefined = undefined;
-      if (backupDoc.documentDate) {
-        try {
-          date = new Date(backupDoc.documentDate);
-          if (isNaN(date.getTime())) {
-            date = undefined;
-          }
-        } catch (e) {
-          date = undefined;
-        }
-      }
-
-      // GENERIERE HASH
+      // Generiere Hash
       const fileHash = this.generateHash(
         backupDoc.filename + 
         backupDoc.uploadDate + 
@@ -254,7 +266,7 @@ class ImportService {
         (backupDoc.amount || '')
       );
 
-      // ERSTELLE DOKUMENT
+      // Erstelle Dokument
       const validDocument: Omit<Document, 'id'> = {
         filename: backupDoc.filename,
         blob: blob,
@@ -270,13 +282,82 @@ class ImportService {
           : undefined
       };
 
-      console.log('  ✅ Dokument konvertiert');
       return validDocument;
       
     } catch (error: any) {
       console.error('  ❌ Konvertierungs-Fehler:', error.message);
       return null;
     }
+  }
+
+  // ============================================
+  // NUR JSON IMPORT (FALLBACK)
+  // ============================================
+  async importFromJSON(jsonString: string): Promise<{ success: number; errors: number }> {
+    console.warn('⚠️  NUR JSON-Import - keine Bilder!');
+    console.warn('   Verwende importFromBackup() für JSON + ZIP\n');
+    
+    const data: BackupFile | BackupDocument[] = JSON.parse(jsonString);
+    const documents = Array.isArray(data) ? data : data.documents;
+    
+    let success = 0;
+    let errors = 0;
+
+    for (const doc of documents) {
+      try {
+        const blob = this.createPlaceholderBlob(doc);
+        const validDoc = await this.convertToDocument(doc, blob);
+        
+        if (validDoc) {
+          await db.documents.add(validDoc);
+          success++;
+        } else {
+          errors++;
+        }
+      } catch (error) {
+        errors++;
+      }
+    }
+
+    return { success, errors };
+  }
+
+  // ============================================
+  // EXPORT
+  // ============================================
+  async exportToJSON(): Promise<string> {
+    const docs = await db.documents.toArray();
+    
+    const exportDocs = await Promise.all(
+      docs.map(async (doc) => {
+        try {
+          const blobBase64 = await this.blobToBase64(doc.blob);
+          return {
+            filename: doc.filename,
+            blob: blobBase64,
+            uploadDate: doc.uploadDate.toISOString(),
+            fileHash: doc.fileHash,
+            customer: doc.customer,
+            amount: doc.amount,
+            invoiceNumber: doc.invoiceNumber,
+            date: doc.date?.toISOString(),
+            ocrText: doc.ocrText,
+            tags: doc.tags
+          };
+        } catch (error) {
+          return null;
+        }
+      })
+    );
+
+    const validExports = exportDocs.filter(d => d !== null);
+    
+    return JSON.stringify({
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      documentCount: validExports.length,
+      documents: validExports
+    }, null, 2);
   }
 
   // ============================================
@@ -300,50 +381,6 @@ class ImportService {
       hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
-  }
-
-  // ============================================
-  // EXPORT FUNKTION
-  // ============================================
-  
-  async exportToJSON(): Promise<string> {
-    const docs = await db.documents.toArray();
-    
-    console.log(`📤 Exportiere ${docs.length} Dokumente...`);
-    
-    const exportDocs = await Promise.all(
-      docs.map(async (doc) => {
-        try {
-          const blobBase64 = await this.blobToBase64(doc.blob);
-          return {
-            filename: doc.filename,
-            blob: blobBase64,
-            uploadDate: doc.uploadDate.toISOString(),
-            fileHash: doc.fileHash,
-            customer: doc.customer,
-            amount: doc.amount,
-            invoiceNumber: doc.invoiceNumber,
-            date: doc.date?.toISOString(),
-            ocrText: doc.ocrText,
-            tags: doc.tags
-          };
-        } catch (error) {
-          console.error('Export-Fehler:', doc.filename, error);
-          return null;
-        }
-      })
-    );
-
-    const validExports = exportDocs.filter(d => d !== null);
-    
-    console.log(`✅ ${validExports.length} Dokumente exportiert`);
-    
-    return JSON.stringify({
-      version: '1.0',
-      exportDate: new Date().toISOString(),
-      documentCount: validExports.length,
-      documents: validExports
-    }, null, 2);
   }
 
   private blobToBase64(blob: Blob): Promise<string> {
