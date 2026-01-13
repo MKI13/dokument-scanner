@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
 import { importService } from '../services/import.service';
 import { modalService } from '../services/modal.service';
-import { stateService } from '../services/state.service';
 import { Document } from '../types/document';
 import { Trash2, Download, Upload, Search, RefreshCw, ImagePlus, ArrowUpDown } from 'lucide-react';
 import './AllDocuments.css';
@@ -15,16 +14,11 @@ interface AllDocumentsProps {
 type SortOption = 'alphabet' | 'date' | 'upload';
 
 export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, refreshTrigger }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  
-  // State aus localStorage laden
-  const savedState = stateService.getAllDocumentsState();
-  
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filteredDocs, setFilteredDocs] = useState<Document[]>([]);
-  const [searchQuery, setSearchQuery] = useState(savedState.searchQuery);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>(savedState.sortBy);
+  const [sortBy, setSortBy] = useState<SortOption>('upload');
 
   useEffect(() => {
     loadDocuments();
@@ -33,30 +27,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
   useEffect(() => {
     filterAndSortDocuments();
   }, [searchQuery, documents, sortBy]);
-
-  // Speichere State bei Änderungen
-  useEffect(() => {
-    stateService.saveAllDocumentsState({ sortBy, searchQuery });
-  }, [sortBy, searchQuery]);
-
-  // Speichere Scroll-Position
-  useEffect(() => {
-    const handleScroll = () => {
-      if (contentRef.current) {
-        stateService.saveScrollPosition('all-documents', contentRef.current.scrollTop);
-      }
-    };
-
-    const element = contentRef.current;
-    if (element) {
-      element.addEventListener('scroll', handleScroll);
-      
-      // Restore scroll position
-      stateService.restoreScrollPosition('all-documents', element);
-      
-      return () => element.removeEventListener('scroll', handleScroll);
-    }
-  }, [loading]);
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -75,6 +45,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
   const filterAndSortDocuments = () => {
     let filtered = documents;
 
+    // Suche
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = documents.filter(doc =>
@@ -84,12 +55,14 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       );
     }
 
+    // Sortierung
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'alphabet':
           return a.filename.localeCompare(b.filename);
         
         case 'date':
+          // Nach Rechnungsdatum
           if (!a.date && !b.date) return 0;
           if (!a.date) return 1;
           if (!b.date) return -1;
@@ -97,6 +70,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
         
         case 'upload':
         default:
+          // Nach Upload-Datum
           return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
       }
     });
@@ -242,6 +216,10 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
 
   const performImport = async (jsonFile: File, zipFile?: File) => {
     try {
+      console.log('🔄 IMPORT GESTARTET');
+      console.log('JSON:', jsonFile.name);
+      console.log('ZIP:', zipFile?.name || 'keine');
+      
       const result = await importService.importFromBackup(jsonFile, zipFile);
       
       await modalService.success(
@@ -342,7 +320,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
         </button>
       </div>
 
-      <div className="page-content" ref={contentRef}>
+      <div className="page-content">
         {filteredDocs.length > 0 ? (
           <div className="documents-grid">
             {filteredDocs.map((doc) => (
@@ -351,6 +329,10 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                   <img 
                     src={URL.createObjectURL(doc.blob)} 
                     alt={doc.filename}
+                    onError={(e) => {
+                      console.error('Bild-Ladefehler:', doc.filename);
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                   
                   {isPlaceholder(doc) && doc.id && (
