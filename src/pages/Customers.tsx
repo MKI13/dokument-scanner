@@ -1,6 +1,6 @@
-import { stateService } from '../services/state.service';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../services/database.service';
+import { stateService } from '../services/state.service';
 import { Document } from '../types/document';
 import { ArrowUpDown, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import './Customers.css';
@@ -20,19 +20,70 @@ interface CustomerData {
 }
 
 export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // WICHTIG: State aus localStorage laden BEI COMPONENT MOUNT
+  const [initialized, setInitialized] = useState(false);
   const [customers, setCustomers] = useState<CustomerData[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<CustomerSortOption>('alphabet');
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
+  // Lade gespeicherten State beim ersten Render
+  useEffect(() => {
+    console.log('🔄 Customers Component mounted');
+    const savedState = stateService.getCustomersState();
+    
+    setSearchQuery(savedState.searchQuery);
+    setSortBy(savedState.sortBy);
+    setExpandedCustomers(new Set(savedState.expandedCustomers));
+    setInitialized(true);
+    
+    console.log('✅ State wiederhergestellt:', savedState);
+  }, []);
+
   useEffect(() => {
     loadCustomers();
   }, []);
 
   useEffect(() => {
-    filterAndSortCustomers();
-  }, [searchQuery, customers, sortBy]);
+    if (initialized) {
+      filterAndSortCustomers();
+    }
+  }, [searchQuery, customers, sortBy, initialized]);
+
+  // Speichere State bei jeder Änderung
+  useEffect(() => {
+    if (initialized) {
+      stateService.saveCustomersState({
+        sortBy,
+        searchQuery,
+        expandedCustomers: Array.from(expandedCustomers)
+      });
+    }
+  }, [sortBy, searchQuery, expandedCustomers, initialized]);
+
+  // Speichere Scroll-Position
+  useEffect(() => {
+    const handleScroll = () => {
+      if (contentRef.current) {
+        stateService.saveScrollPosition('customers', contentRef.current.scrollTop);
+      }
+    };
+
+    const element = contentRef.current;
+    if (element) {
+      element.addEventListener('scroll', handleScroll);
+      
+      // Restore scroll
+      if (initialized) {
+        stateService.restoreScrollPosition('customers', element);
+      }
+      
+      return () => element.removeEventListener('scroll', handleScroll);
+    }
+  }, [customers.length, initialized]);
 
   const loadCustomers = async () => {
     const docs = await db.documents.toArray();
@@ -63,6 +114,7 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
 
     const customerList = Array.from(customerMap.values());
     setCustomers(customerList);
+    console.log(`✅ ${customerList.length} Kunden geladen`);
   };
 
   const filterAndSortCustomers = () => {
@@ -109,6 +161,7 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
     const options: CustomerSortOption[] = ['alphabet', 'count', 'recent'];
     const currentIndex = options.indexOf(sortBy);
     const nextIndex = (currentIndex + 1) % options.length;
+    console.log(`🔄 Sortierung gewechselt: ${sortBy} → ${options[nextIndex]}`);
     setSortBy(options[nextIndex]);
   };
 
@@ -116,8 +169,10 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
     const newExpanded = new Set(expandedCustomers);
     if (newExpanded.has(customerName)) {
       newExpanded.delete(customerName);
+      console.log(`📁 Kunde zugeklappt: ${customerName}`);
     } else {
       newExpanded.add(customerName);
+      console.log(`📂 Kunde aufgeklappt: ${customerName}`);
     }
     setExpandedCustomers(newExpanded);
   };
@@ -125,6 +180,15 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
   const isExpanded = (customerName: string): boolean => {
     return expandedCustomers.has(customerName);
   };
+
+  if (!initialized) {
+    return (
+      <div className="loading">
+        <div className="spinner" />
+        <p>Lade Kunden...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
@@ -154,7 +218,7 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
         </button>
       </div>
 
-      <div className="page-content">
+      <div className="page-content" ref={contentRef}>
         <div className="customers-list">
           {filteredCustomers.length > 0 ? (
             filteredCustomers.map(customer => {
@@ -162,7 +226,6 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
               
               return (
                 <div key={customer.name} className="customer-item">
-                  {/* Kunden-Header (klickbar) */}
                   <div 
                     className={`customer-card ${expanded ? 'expanded' : ''}`}
                     onClick={() => toggleCustomer(customer.name)}
@@ -184,7 +247,6 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
                     )}
                   </div>
 
-                  {/* Dokumente-Liste (aufklappbar) */}
                   {expanded && (
                     <div className="customer-documents">
                       {customer.documents
