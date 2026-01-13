@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
-import { ArrowUpDown, Search, ChevronRight } from 'lucide-react';
+import { Document } from '../types/document';
+import { ArrowUpDown, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import './Customers.css';
 
 interface CustomersProps {
@@ -14,6 +15,7 @@ interface CustomerData {
   count: number;
   totalAmount: number;
   lastDate?: Date;
+  documents: Document[];
 }
 
 export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
@@ -21,6 +23,7 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<CustomerSortOption>('alphabet');
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadCustomers();
@@ -41,6 +44,7 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
         if (existing) {
           existing.count++;
           existing.totalAmount += doc.amount || 0;
+          existing.documents.push(doc);
           if (doc.date && (!existing.lastDate || doc.date > existing.lastDate)) {
             existing.lastDate = doc.date;
           }
@@ -49,7 +53,8 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
             name: doc.customer,
             count: 1,
             totalAmount: doc.amount || 0,
-            lastDate: doc.date
+            lastDate: doc.date,
+            documents: [doc]
           });
         }
       }
@@ -62,7 +67,6 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
   const filterAndSortCustomers = () => {
     let filtered = customers;
 
-    // Suche
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = customers.filter(c =>
@@ -70,7 +74,6 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
       );
     }
 
-    // Sortierung
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'alphabet':
@@ -108,10 +111,18 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
     setSortBy(options[nextIndex]);
   };
 
-  const handleCustomerClick = (customerName: string) => {
-    // TODO: Navigation zu CustomerView implementieren
-    console.log('Kunde angeklickt:', customerName);
-    // Für jetzt nur Console-Log, kann später erweitert werden
+  const toggleCustomer = (customerName: string) => {
+    const newExpanded = new Set(expandedCustomers);
+    if (newExpanded.has(customerName)) {
+      newExpanded.delete(customerName);
+    } else {
+      newExpanded.add(customerName);
+    }
+    setExpandedCustomers(newExpanded);
+  };
+
+  const isExpanded = (customerName: string): boolean => {
+    return expandedCustomers.has(customerName);
   };
 
   return (
@@ -145,25 +156,66 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
       <div className="page-content">
         <div className="customers-list">
           {filteredCustomers.length > 0 ? (
-            filteredCustomers.map(customer => (
-              <div 
-                key={customer.name} 
-                className="customer-card"
-                onClick={() => handleCustomerClick(customer.name)}
-              >
-                <div className="customer-info">
-                  <h3>{customer.name}</h3>
-                  <div className="customer-stats">
-                    <span>📄 {customer.count} Dokumente</span>
-                    <span>💰 {customer.totalAmount.toFixed(2)} EUR</span>
-                    {customer.lastDate && (
-                      <span>📅 {new Date(customer.lastDate).toLocaleDateString('de-DE')}</span>
+            filteredCustomers.map(customer => {
+              const expanded = isExpanded(customer.name);
+              
+              return (
+                <div key={customer.name} className="customer-item">
+                  {/* Kunden-Header (klickbar) */}
+                  <div 
+                    className={`customer-card ${expanded ? 'expanded' : ''}`}
+                    onClick={() => toggleCustomer(customer.name)}
+                  >
+                    <div className="customer-info">
+                      <h3>{customer.name}</h3>
+                      <div className="customer-stats">
+                        <span>📄 {customer.count} Dokumente</span>
+                        <span>💰 {customer.totalAmount.toFixed(2)} EUR</span>
+                        {customer.lastDate && (
+                          <span>📅 {new Date(customer.lastDate).toLocaleDateString('de-DE')}</span>
+                        )}
+                      </div>
+                    </div>
+                    {expanded ? (
+                      <ChevronDown size={20} className="customer-arrow" />
+                    ) : (
+                      <ChevronRight size={20} className="customer-arrow" />
                     )}
                   </div>
+
+                  {/* Dokumente-Liste (aufklappbar) */}
+                  {expanded && (
+                    <div className="customer-documents">
+                      {customer.documents
+                        .sort((a, b) => 
+                          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+                        )
+                        .map(doc => (
+                          <div key={doc.id} className="document-item">
+                            <div className="document-thumbnail">
+                              <img 
+                                src={URL.createObjectURL(doc.blob)} 
+                                alt={doc.filename}
+                              />
+                            </div>
+                            <div className="document-details">
+                              <h4>{doc.filename}</h4>
+                              <div className="document-meta">
+                                {doc.amount && (
+                                  <span>💰 {doc.amount.toFixed(2)} EUR</span>
+                                )}
+                                {doc.date && (
+                                  <span>📅 {new Date(doc.date).toLocaleDateString('de-DE')}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
-                <ChevronRight size={20} className="customer-arrow" />
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="no-customers">
               <p>
