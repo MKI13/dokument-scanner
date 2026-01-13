@@ -39,7 +39,6 @@ class ImportService {
     console.log('');
 
     try {
-      // 1. Lade JSON-Datenbank
       const jsonText = await jsonFile.text();
       const backupData: BackupFile | BackupDocument[] = JSON.parse(jsonText);
       
@@ -57,7 +56,6 @@ class ImportService {
 
       console.log(`\n✅ ${documents.length} Dokumente in JSON gefunden\n`);
 
-      // 2. Lade ZIP-Archiv (falls vorhanden)
       let imageMap = new Map<string, Blob>();
       
       if (zipFile) {
@@ -69,7 +67,6 @@ class ImportService {
         console.warn('   → Erstelle Platzhalter-Bilder\n');
       }
 
-      // 3. Importiere Dokumente
       let success = 0;
       let errors = 0;
 
@@ -83,10 +80,8 @@ class ImportService {
         console.log(`[${i + 1}/${documents.length}] ${doc.filename}`);
         
         try {
-          // Suche passendes Bild im ZIP
           let blob: Blob | null = null;
           
-          // Versuche verschiedene Dateinamen-Varianten
           const possibleNames = [
             doc.filename,
             doc.originalFilename,
@@ -102,13 +97,11 @@ class ImportService {
             }
           }
 
-          // Falls kein Bild gefunden → Platzhalter
           if (!blob) {
             console.log('  ⚠️  Kein Bild gefunden → Platzhalter');
             blob = this.createPlaceholderBlob(doc);
           }
 
-          // Konvertiere zu Document
           const validDoc = await this.convertToDocument(doc, blob);
           
           if (!validDoc) {
@@ -117,7 +110,6 @@ class ImportService {
             continue;
           }
 
-          // Speichere in DB
           const id = await db.documents.add(validDoc);
           console.log(`  ✅ Gespeichert (ID: ${id})\n`);
           success++;
@@ -142,23 +134,16 @@ class ImportService {
     }
   }
 
-  // ============================================
-  // LADE BILDER AUS ZIP
-  // ============================================
   private async loadImagesFromZip(zipFile: File): Promise<Map<string, Blob>> {
     const imageMap = new Map<string, Blob>();
     
     try {
       const zip = await JSZip.loadAsync(zipFile);
-      
-      // Durchsuche alle Dateien im ZIP
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
       
       for (const [path, file] of Object.entries(zip.files)) {
-        // Ignoriere Ordner
         if (file.dir) continue;
         
-        // Prüfe ob Bild-Datei
         const isImage = imageExtensions.some(ext => 
           path.toLowerCase().endsWith(ext)
         );
@@ -166,14 +151,11 @@ class ImportService {
         if (isImage) {
           try {
             const blob = await file.async('blob');
-            
-            // Speichere mit verschiedenen Keys (mit/ohne Pfad)
             const filename = path.split('/').pop() || path;
             
             imageMap.set(filename, blob);
             imageMap.set(path, blob);
             
-            // Auch ohne Extension
             const nameWithoutExt = filename.replace(/\.[^.]+$/, '');
             imageMap.set(nameWithoutExt, blob);
             
@@ -193,9 +175,6 @@ class ImportService {
     return imageMap;
   }
 
-  // ============================================
-  // ERSTELLE PLATZHALTER-BILD
-  // ============================================
   private createPlaceholderBlob(doc: BackupDocument): Blob {
     const svg = `
       <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
@@ -240,25 +219,19 @@ class ImportService {
     return new Blob([svg], { type: 'image/svg+xml' });
   }
 
-  // ============================================
-  // KONVERTIERE ZU DOCUMENT
-  // ============================================
   private async convertToDocument(
     backupDoc: BackupDocument, 
     blob: Blob
   ): Promise<Omit<Document, 'id'> | null> {
     try {
-      // Validiere Blob
       if (!blob || blob.size === 0) {
         console.error('  ❌ Blob ist leer');
         return null;
       }
 
-      // Konvertiere Datum
       const uploadDate = new Date(backupDoc.uploadDate);
       const date = backupDoc.documentDate ? new Date(backupDoc.documentDate) : undefined;
 
-      // Generiere Hash
       const fileHash = this.generateHash(
         backupDoc.filename + 
         backupDoc.uploadDate + 
@@ -266,7 +239,6 @@ class ImportService {
         (backupDoc.amount || '')
       );
 
-      // Erstelle Dokument
       const validDocument: Omit<Document, 'id'> = {
         filename: backupDoc.filename,
         blob: blob,
@@ -290,9 +262,6 @@ class ImportService {
     }
   }
 
-  // ============================================
-  // NUR JSON IMPORT (FALLBACK)
-  // ============================================
   async importFromJSON(jsonString: string): Promise<{ success: number; errors: number }> {
     console.warn('⚠️  NUR JSON-Import - keine Bilder!');
     console.warn('   Verwende importFromBackup() für JSON + ZIP\n');
@@ -323,8 +292,62 @@ class ImportService {
   }
 
   // ============================================
-  // EXPORT
+  // EXPORT MIT BILDERN (JSON + ZIP SEPARAT)
   // ============================================
+  
+  async exportWithImages(): Promise<{ json: Blob; zip: Blob }> {
+    const docs = await db.documents.toArray();
+    
+    console.log(`📤 Exportiere ${docs.length} Dokumente mit Bildern...`);
+    
+    const exportDocs = docs.map(doc => ({
+      filename: doc.filename,
+      uploadDate: doc.uploadDate.toISOString(),
+      fileHash: doc.fileHash,
+      customer: doc.customer,
+      amount: doc.amount,
+      invoiceNumber: doc.invoiceNumber,
+      date: doc.date?.toISOString(),
+      ocrText: doc.ocrText,
+      tags: doc.tags
+    }));
+
+    const jsonBlob = new Blob([JSON.stringify({
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      documentCount: exportDocs.length,
+      documents: exportDocs
+    }, null, 2)], { type: 'application/json' });
+
+    const zip = new JSZip();
+
+    for (const doc of docs) {
+      try {
+        const ext = doc.blob.type === 'image/jpeg' ? '.jpg' :
+                    doc.blob.type === 'image/png' ? '.png' :
+                    doc.blob.type === 'image/webp' ? '.webp' :
+                    doc.blob.type === 'image/svg+xml' ? '.svg' : '.jpg';
+        
+        const filename = doc.filename.includes('.') 
+          ? doc.filename 
+          : doc.filename + ext;
+
+        zip.file(filename, doc.blob);
+        console.log(`  📷 ${filename}`);
+      } catch (error) {
+        console.error(`Fehler bei ${doc.filename}:`, error);
+      }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    
+    console.log(`✅ Export fertig:`);
+    console.log(`   JSON: ${(jsonBlob.size / 1024).toFixed(2)} KB`);
+    console.log(`   ZIP: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
+
+    return { json: jsonBlob, zip: zipBlob };
+  }
+
   async exportToJSON(): Promise<string> {
     const docs = await db.documents.toArray();
     
@@ -360,10 +383,6 @@ class ImportService {
     }, null, 2);
   }
 
-  // ============================================
-  // HILFSFUNKTIONEN
-  // ============================================
-  
   private escapeXml(text: string): string {
     return text
       .replace(/&/g, '&amp;')
@@ -394,64 +413,3 @@ class ImportService {
 }
 
 export const importService = new ImportService();
-
-  // ============================================
-  // EXPORT MIT SEPARATEM ZIP
-  // ============================================
-  
-  async exportWithImages(): Promise<{ json: Blob; zip: Blob }> {
-    const docs = await db.documents.toArray();
-    
-    console.log(`📤 Exportiere ${docs.length} Dokumente mit Bildern...`);
-    
-    // 1. Erstelle JSON (ohne Bilder)
-    const exportDocs = docs.map(doc => ({
-      filename: doc.filename,
-      uploadDate: doc.uploadDate.toISOString(),
-      fileHash: doc.fileHash,
-      customer: doc.customer,
-      amount: doc.amount,
-      invoiceNumber: doc.invoiceNumber,
-      date: doc.date?.toISOString(),
-      ocrText: doc.ocrText,
-      tags: doc.tags
-    }));
-
-    const jsonBlob = new Blob([JSON.stringify({
-      version: '1.0',
-      exportDate: new Date().toISOString(),
-      documentCount: exportDocs.length,
-      documents: exportDocs
-    }, null, 2)], { type: 'application/json' });
-
-    // 2. Erstelle ZIP mit Bildern
-    const JSZip = (await import('jszip')).default;
-    const zip = new JSZip();
-
-    for (const doc of docs) {
-      try {
-        // Bestimme Dateiendung
-        const ext = doc.blob.type === 'image/jpeg' ? '.jpg' :
-                    doc.blob.type === 'image/png' ? '.png' :
-                    doc.blob.type === 'image/webp' ? '.webp' :
-                    doc.blob.type === 'image/svg+xml' ? '.svg' : '.jpg';
-        
-        const filename = doc.filename.includes('.') 
-          ? doc.filename 
-          : doc.filename + ext;
-
-        zip.file(filename, doc.blob);
-        console.log(`  📷 ${filename}`);
-      } catch (error) {
-        console.error(`Fehler bei ${doc.filename}:`, error);
-      }
-    }
-
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    
-    console.log(`✅ Export fertig:`);
-    console.log(`   JSON: ${(jsonBlob.size / 1024).toFixed(2)} KB`);
-    console.log(`   ZIP: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
-
-    return { json: jsonBlob, zip: zipBlob };
-  }
