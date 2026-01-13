@@ -111,55 +111,18 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
 
   const handleExport = async () => {
     try {
-      const withImages = await modalService.confirm(
-        '📦 Wie möchtest du exportieren?\n\n' +
-        '✅ MIT BILDERN → JSON + ZIP (empfohlen!)\n' +
-        '❌ NUR DATEN → Nur JSON (ohne Bilder)',
-        'Export-Typ wählen'
-      );
-
-      if (withImages) {
-        const { json, zip } = await importService.exportWithImages();
-        const date = new Date().toISOString().split('T')[0];
-        
-        const jsonUrl = URL.createObjectURL(json);
-        const jsonLink = document.createElement('a');
-        jsonLink.href = jsonUrl;
-        jsonLink.download = `dokumente-backup_${date}.json`;
-        document.body.appendChild(jsonLink);
-        jsonLink.click();
-        document.body.removeChild(jsonLink);
-        URL.revokeObjectURL(jsonUrl);
-        
-        const zipUrl = URL.createObjectURL(zip);
-        const zipLink = document.createElement('a');
-        zipLink.href = zipUrl;
-        zipLink.download = `dokumente-bilder_${date}.zip`;
-        document.body.appendChild(zipLink);
-        zipLink.click();
-        document.body.removeChild(zipLink);
-        URL.revokeObjectURL(zipUrl);
-        
-        await modalService.success(
-          '✅ Backup exportiert!\n\n' +
-          '2 Dateien heruntergeladen:\n' +
-          '📄 JSON (Metadaten)\n' +
-          '📷 ZIP (Bilder)'
-        );
-      } else {
-        const jsonString = await importService.exportToJSON();
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `dokumente-backup_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        await modalService.success('✅ JSON exportiert (ohne Bilder)');
-      }
+      const jsonString = await importService.exportToJSON();
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dokumente-backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      await modalService.success('✅ Backup exportiert!\n\nDie JSON-Datei wurde heruntergeladen.');
     } catch (error) {
       console.error('Export-Fehler:', error);
       await modalService.error('Export fehlgeschlagen');
