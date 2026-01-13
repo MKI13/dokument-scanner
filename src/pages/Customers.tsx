@@ -1,133 +1,162 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
-import { Document } from '../types/document';
-import { DocumentCard } from '../components/Document/DocumentCard';
-import { Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowUpDown, Search } from 'lucide-react';
 import './Customers.css';
-
-interface CustomerGroup {
-  name: string;
-  documents: Document[];
-  totalAmount: number;
-}
 
 interface CustomersProps {
   setSwipeEnabled: (enabled: boolean) => void;
 }
 
+type CustomerSortOption = 'alphabet' | 'count' | 'recent';
+
+interface CustomerData {
+  name: string;
+  count: number;
+  totalAmount: number;
+  lastDate?: Date;
+}
+
 export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
-  const [customers, setCustomers] = useState<CustomerGroup[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState<CustomerData[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<CustomerSortOption>('alphabet');
 
   useEffect(() => {
     loadCustomers();
   }, []);
 
+  useEffect(() => {
+    filterAndSortCustomers();
+  }, [searchQuery, customers, sortBy]);
+
   const loadCustomers = async () => {
-    setLoading(true);
-    try {
-      const allDocs = await db.documents.toArray();
-      
-      // Gruppiere nach Kunde
-      const customerMap = new Map<string, Document[]>();
-      
-      allDocs.forEach(doc => {
-        const customer = doc.customer || 'Unbekannt';
-        if (!customerMap.has(customer)) {
-          customerMap.set(customer, []);
+    const docs = await db.documents.toArray();
+    
+    const customerMap = new Map<string, CustomerData>();
+    
+    docs.forEach(doc => {
+      if (doc.customer) {
+        const existing = customerMap.get(doc.customer);
+        if (existing) {
+          existing.count++;
+          existing.totalAmount += doc.amount || 0;
+          if (doc.date && (!existing.lastDate || doc.date > existing.lastDate)) {
+            existing.lastDate = doc.date;
+          }
+        } else {
+          customerMap.set(doc.customer, {
+            name: doc.customer,
+            count: 1,
+            totalAmount: doc.amount || 0,
+            lastDate: doc.date
+          });
         }
-        customerMap.get(customer)?.push(doc);
-      });
+      }
+    });
 
-      // Erstelle CustomerGroups
-      const groups: CustomerGroup[] = [];
-      customerMap.forEach((docs, name) => {
-        const totalAmount = docs.reduce((sum, doc) => sum + (doc.amount || 0), 0);
-        groups.push({ name, documents: docs, totalAmount });
-      });
+    const customerList = Array.from(customerMap.values());
+    setCustomers(customerList);
+  };
 
-      // Sortiere nach Anzahl Dokumente
-      groups.sort((a, b) => b.documents.length - a.documents.length);
-      
-      setCustomers(groups);
-    } catch (error) {
-      console.error('Fehler beim Laden:', error);
-    } finally {
-      setLoading(false);
+  const filterAndSortCustomers = () => {
+    let filtered = customers;
+
+    // Suche
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = customers.filter(c =>
+        c.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Sortierung
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'alphabet':
+          return a.name.localeCompare(b.name);
+        
+        case 'count':
+          return b.count - a.count;
+        
+        case 'recent':
+          if (!a.lastDate && !b.lastDate) return 0;
+          if (!a.lastDate) return 1;
+          if (!b.lastDate) return -1;
+          return b.lastDate.getTime() - a.lastDate.getTime();
+        
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredCustomers(sorted);
+  };
+
+  const getSortLabel = (): string => {
+    switch (sortBy) {
+      case 'alphabet': return 'A-Z';
+      case 'count': return 'Anzahl';
+      case 'recent': return 'Neueste';
     }
   };
 
-  const selectedGroup = customers.find(c => c.name === selectedCustomer);
-
-  if (loading) {
-    return (
-      <div className="loading">
-        <div className="spinner" />
-        <p>Lade Kunden...</p>
-      </div>
-    );
-  }
+  const cycleSortOption = () => {
+    const options: CustomerSortOption[] = ['alphabet', 'count', 'recent'];
+    const currentIndex = options.indexOf(sortBy);
+    const nextIndex = (currentIndex + 1) % options.length;
+    setSortBy(options[nextIndex]);
+  };
 
   return (
-    <div className="customers-page">
+    <div className="page-container">
       <div className="page-header">
         <h1>👥 Kunden</h1>
-        <span className="customer-count">
-          {customers.length} Kunde{customers.length !== 1 ? 'n' : ''}
-        </span>
       </div>
 
-      {customers.length > 0 ? (
-        <>
-          <div className="customers-list">
-            {customers.map(customer => (
-              <div
-                key={customer.name}
-                className={`customer-item ${selectedCustomer === customer.name ? 'active' : ''}`}
-                onClick={() => setSelectedCustomer(
-                  selectedCustomer === customer.name ? null : customer.name
-                )}
-              >
-                <div className="customer-avatar">
-                  {customer.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="customer-info">
-                  <h3>{customer.name}</h3>
-                  <div className="customer-meta">
-                    <span>📄 {customer.documents.length} Dokument{customer.documents.length !== 1 ? 'e' : ''}</span>
-                    <span>💰 {customer.totalAmount.toFixed(2)} €</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="search-bar">
+        <Search size={20} />
+        <input
+          type="text"
+          placeholder="Suche nach Kunde..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
 
-          {selectedGroup && (
-            <div className="customer-documents">
-              <h3>
-                📄 {selectedGroup.documents.length} Dokument{selectedGroup.documents.length !== 1 ? 'e' : ''} von {selectedGroup.name}
-              </h3>
-              <div className="documents-grid">
-                {selectedGroup.documents.map(doc => (
-                  <DocumentCard
-                    key={doc.id}
-                    document={doc}
-                    setSwipeEnabled={setSwipeEnabled}
-                    onUpdate={loadCustomers}
-                  />
-                ))}
+      <div className="stats-bar">
+        <span>{filteredCustomers.length} Kunden</span>
+        <button 
+          onClick={cycleSortOption}
+          className="sort-button"
+          title="Sortierung ändern"
+        >
+          <ArrowUpDown size={16} />
+          <span>{getSortLabel()}</span>
+        </button>
+      </div>
+
+      <div className="customers-list">
+        {filteredCustomers.map(customer => (
+          <Link 
+            key={customer.name} 
+            to={`/customer/${encodeURIComponent(customer.name)}`}
+            className="customer-card"
+          >
+            <div className="customer-info">
+              <h3>{customer.name}</h3>
+              <div className="customer-stats">
+                <span>📄 {customer.count} Dokumente</span>
+                <span>💰 {customer.totalAmount.toFixed(2)} EUR</span>
+                {customer.lastDate && (
+                  <span>📅 {new Date(customer.lastDate).toLocaleDateString('de-DE')}</span>
+                )}
               </div>
             </div>
-          )}
-        </>
-      ) : (
-        <div className="no-customers">
-          <Users size={64} />
-          <h2>Keine Kunden</h2>
-          <p>Lade Dokumente mit Kundennamen hoch</p>
-        </div>
-      )}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 };

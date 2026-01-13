@@ -91,3 +91,39 @@
   color: #cbd5e1;
   margin-bottom: 8px;
 }
+
+/* Sort Button für Customers */
+.sort-button {
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #cbd5e1;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.sort-button:hover {
+  background: #475569;
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+}
+
+.sort-button:active {
+  transform: scale(0.95);
+}
+
+.stats-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #1e293b;
+  border-bottom: 2px solid #334155;
+  color: #94a3b8;
+  font-size: 14px;
+}

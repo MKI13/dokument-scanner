@@ -3,7 +3,7 @@ import { db } from '../services/database.service';
 import { importService } from '../services/import.service';
 import { modalService } from '../services/modal.service';
 import { Document } from '../types/document';
-import { Trash2, Download, Upload, Search, RefreshCw, ImagePlus, ArrowUpDown } from 'lucide-react';
+import { Trash2, Download, Upload, Search, RefreshCw, ImagePlus } from 'lucide-react';
 import './AllDocuments.css';
 
 interface AllDocumentsProps {
@@ -11,29 +11,29 @@ interface AllDocumentsProps {
   refreshTrigger: number;
 }
 
-type SortOption = 'alphabet' | 'date' | 'upload';
-
 export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, refreshTrigger }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filteredDocs, setFilteredDocs] = useState<Document[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>('upload');
 
   useEffect(() => {
     loadDocuments();
   }, [refreshTrigger]);
 
   useEffect(() => {
-    filterAndSortDocuments();
-  }, [searchQuery, documents, sortBy]);
+    filterDocuments();
+  }, [searchQuery, documents]);
 
   const loadDocuments = async () => {
     setLoading(true);
     try {
       const docs = await db.documents.toArray();
-      setDocuments(docs);
-      console.log(`✅ GELADEN: ${docs.length} Dokumente`);
+      const sorted = docs.sort((a, b) => 
+        new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+      );
+      setDocuments(sorted);
+      console.log(`✅ GELADEN: ${sorted.length} Dokumente`);
     } catch (error) {
       console.error('Fehler beim Laden:', error);
       await modalService.error('Fehler beim Laden der Dokumente');
@@ -42,42 +42,25 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
     }
   };
 
-  const filterAndSortDocuments = () => {
-    let filtered = documents;
-
-    // Suche
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = documents.filter(doc =>
-        doc.filename.toLowerCase().includes(query) ||
-        doc.customer?.toLowerCase().includes(query) ||
-        doc.ocrText?.toLowerCase().includes(query)
-      );
+  const filterDocuments = () => {
+    if (!searchQuery.trim()) {
+      setFilteredDocs(documents);
+      return;
     }
 
-    // Sortierung
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'alphabet':
-          return a.filename.localeCompare(b.filename);
-        
-        case 'date':
-          // Nach Rechnungsdatum
-          if (!a.date && !b.date) return 0;
-          if (!a.date) return 1;
-          if (!b.date) return -1;
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        
-        case 'upload':
-        default:
-          // Nach Upload-Datum
-          return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
-      }
-    });
-
-    setFilteredDocs(sorted);
+    const query = searchQuery.toLowerCase();
+    const filtered = documents.filter(doc =>
+      doc.filename.toLowerCase().includes(query) ||
+      doc.customer?.toLowerCase().includes(query) ||
+      doc.ocrText?.toLowerCase().includes(query)
+    );
+    setFilteredDocs(filtered);
   };
 
+  // ============================================
+  // BILD ERSETZEN/HOCHLADEN
+  // ============================================
+  
   const handleReplaceImage = async (doc: Document) => {
     if (!doc.id) return;
 
@@ -90,10 +73,15 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       if (!file) return;
 
       try {
+        // Erstelle neues Blob
         const newBlob = new Blob([await file.arrayBuffer()], { type: file.type });
+
+        // Update in DB
         await db.documents.update(doc.id!, { blob: newBlob });
+
         await modalService.success('✅ Bild ersetzt!');
         loadDocuments();
+
       } catch (error) {
         console.error('Fehler beim Ersetzen:', error);
         await modalService.error('Fehler beim Bild ersetzen');
@@ -230,29 +218,16 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       );
       
       loadDocuments();
+      
     } catch (error: any) {
       console.error('Import-Fehler:', error);
       await modalService.error(`Import fehlgeschlagen:\n\n${error.message}`);
     }
   };
 
+  // Prüfe ob Platzhalter-Bild (SVG)
   const isPlaceholder = (doc: Document): boolean => {
     return doc.blob?.type === 'image/svg+xml';
-  };
-
-  const getSortLabel = (): string => {
-    switch (sortBy) {
-      case 'alphabet': return 'A-Z';
-      case 'date': return 'Rechnungsdatum';
-      case 'upload': return 'Upload-Datum';
-    }
-  };
-
-  const cycleSortOption = () => {
-    const options: SortOption[] = ['upload', 'date', 'alphabet'];
-    const currentIndex = options.indexOf(sortBy);
-    const nextIndex = (currentIndex + 1) % options.length;
-    setSortBy(options[nextIndex]);
   };
 
   if (loading) {
@@ -310,14 +285,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
             : `${filteredDocs.length} von ${documents.length} Dokumenten`
           }
         </span>
-        <button 
-          onClick={cycleSortOption}
-          className="sort-button"
-          title="Sortierung ändern"
-        >
-          <ArrowUpDown size={16} />
-          <span>{getSortLabel()}</span>
-        </button>
       </div>
 
       <div className="page-content">
@@ -335,6 +302,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                     }}
                   />
                   
+                  {/* Bild ersetzen Button (nur bei Platzhaltern) */}
                   {isPlaceholder(doc) && doc.id && (
                     <button
                       onClick={(e) => {
