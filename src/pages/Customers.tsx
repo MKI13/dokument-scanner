@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
-import { Link } from 'react-router-dom';
-import { ArrowUpDown, Search } from 'lucide-react';
+import { ArrowUpDown, Search, ChevronRight } from 'lucide-react';
 import './Customers.css';
 
 interface CustomersProps {
@@ -109,6 +108,12 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
     setSortBy(options[nextIndex]);
   };
 
+  const handleCustomerClick = (customerName: string) => {
+    // TODO: Navigation zu CustomerView implementieren
+    console.log('Kunde angeklickt:', customerName);
+    // Für jetzt nur Console-Log, kann später erweitert werden
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -137,25 +142,36 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
         </button>
       </div>
 
-      <div className="customers-list">
-        {filteredCustomers.map(customer => (
-          <Link 
-            key={customer.name} 
-            to={`/customer/${encodeURIComponent(customer.name)}`}
-            className="customer-card"
-          >
-            <div className="customer-info">
-              <h3>{customer.name}</h3>
-              <div className="customer-stats">
-                <span>📄 {customer.count} Dokumente</span>
-                <span>💰 {customer.totalAmount.toFixed(2)} EUR</span>
-                {customer.lastDate && (
-                  <span>📅 {new Date(customer.lastDate).toLocaleDateString('de-DE')}</span>
-                )}
+      <div className="page-content">
+        <div className="customers-list">
+          {filteredCustomers.length > 0 ? (
+            filteredCustomers.map(customer => (
+              <div 
+                key={customer.name} 
+                className="customer-card"
+                onClick={() => handleCustomerClick(customer.name)}
+              >
+                <div className="customer-info">
+                  <h3>{customer.name}</h3>
+                  <div className="customer-stats">
+                    <span>📄 {customer.count} Dokumente</span>
+                    <span>💰 {customer.totalAmount.toFixed(2)} EUR</span>
+                    {customer.lastDate && (
+                      <span>📅 {new Date(customer.lastDate).toLocaleDateString('de-DE')}</span>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight size={20} className="customer-arrow" />
               </div>
+            ))
+          ) : (
+            <div className="no-customers">
+              <p>
+                {searchQuery ? 'Keine Kunden gefunden' : 'Noch keine Kunden vorhanden'}
+              </p>
             </div>
-          </Link>
-        ))}
+          )}
+        </div>
       </div>
     </div>
   );
