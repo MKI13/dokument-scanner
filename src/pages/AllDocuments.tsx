@@ -395,8 +395,8 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                   )}
                 </div>
                 
-                {/* IMMER SICHTBARE BUTTONS */}
-                <div className="document-actions">
+                {/* ANSEHEN & BEARBEITEN - RECHTS OBEN */}
+                <div className="document-actions-top">
                   {doc.id && (
                     <>
                       <button
@@ -419,17 +419,23 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                       >
                         <Edit2 size={18} />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(doc);
-                        }}
-                        className="delete-button"
-                        title="Löschen"
-                      >
-                        <Trash2 size={18} />
-                      </button>
                     </>
+                  )}
+                </div>
+
+                {/* LÖSCHEN - LINKS UNTEN */}
+                <div className="document-actions-bottom">
+                  {doc.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(doc);
+                      }}
+                      className="delete-button"
+                      title="Löschen"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   )}
                 </div>
               </div>
@@ -444,22 +450,20 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
         )}
       </div>
 
-      {/* Document Viewer */}
       {viewingDocument && (
         <DocumentViewer
-          setSwipeEnabled={setSwipeEnabled}
           document={viewingDocument}
           onClose={handleViewerClose}
+          setSwipeEnabled={setSwipeEnabled}
         />
       )}
 
-      {/* Document Editor */}
       {editingDocument && (
         <DocumentEditor
-          setSwipeEnabled={setSwipeEnabled}
           document={editingDocument}
           onClose={handleEditorClose}
           onSave={handleEditorSave}
+          setSwipeEnabled={setSwipeEnabled}
         />
       )}
     </div>
