@@ -4,8 +4,9 @@ import { importService } from '../services/import.service';
 import { modalService } from '../services/modal.service';
 import { stateService } from '../services/state.service';
 import { DocumentEditor } from '../components/DocumentEditor';
+import { DocumentViewer } from '../components/DocumentViewer';
 import { Document } from '../types/document';
-import { Trash2, Download, Upload, Search, RefreshCw, ImagePlus, ArrowUpDown, Edit2 } from 'lucide-react';
+import { Trash2, Download, Upload, Search, RefreshCw, ImagePlus, ArrowUpDown, Edit2, Eye } from 'lucide-react';
 import './AllDocuments.css';
 
 interface AllDocumentsProps {
@@ -26,6 +27,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>(savedState.sortBy);
   const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
 
   useEffect(() => {
     loadDocuments();
@@ -100,12 +102,20 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
     setFilteredDocs(sorted);
   };
 
+  const handleView = (doc: Document) => {
+    setViewingDocument(doc);
+  };
+
   const handleEdit = (doc: Document) => {
     setEditingDocument(doc);
   };
 
   const handleEditorClose = () => {
     setEditingDocument(null);
+  };
+
+  const handleViewerClose = () => {
+    setViewingDocument(null);
   };
 
   const handleEditorSave = () => {
@@ -375,6 +385,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                     </button>
                   )}
                 </div>
+                
                 <div className="document-info">
                   <h3>{doc.filename}</h3>
                   {doc.customer && <p>👤 {doc.customer}</p>}
@@ -383,9 +394,21 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                     <p>📅 {new Date(doc.date).toLocaleDateString('de-DE')}</p>
                   )}
                 </div>
+                
+                {/* IMMER SICHTBARE BUTTONS */}
                 <div className="document-actions">
                   {doc.id && (
                     <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleView(doc);
+                        }}
+                        className="view-button"
+                        title="Ansehen"
+                      >
+                        <Eye size={18} />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -420,6 +443,14 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
           </div>
         )}
       </div>
+
+      {/* Document Viewer */}
+      {viewingDocument && (
+        <DocumentViewer
+          document={viewingDocument}
+          onClose={handleViewerClose}
+        />
+      )}
 
       {/* Document Editor */}
       {editingDocument && (
