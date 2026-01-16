@@ -216,3 +216,45 @@ body {
     height: 20px;
   }
 }
+
+/* ============================================
+   SCANNER PAGE HEADER
+   ============================================ */
+
+.page-header-scanner {
+  padding: 20px;
+  background: #1e293b;
+  border-bottom: 2px solid #334155;
+}
+
+.page-header-scanner .header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-header-scanner h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .page-header-scanner {
+    padding: 12px 16px;
+  }
+
+  .page-header-scanner h1 {
+    font-size: 18px;
+  }
+
+  .page-header-scanner .header-title {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header-scanner h1 {
+    font-size: 16px;
+  }
+}

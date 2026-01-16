@@ -16,6 +16,8 @@ interface AllDocumentsProps {
 
 type SortOption = 'alphabet' | 'date' | 'upload';
 
+const APP_VERSION = 'v1.5.2';
+
 export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, refreshTrigger }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   
@@ -75,11 +77,41 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = documents.filter(doc =>
-        doc.filename.toLowerCase().includes(query) ||
-        doc.customer?.toLowerCase().includes(query) ||
-        doc.ocrText?.toLowerCase().includes(query)
-      );
+      
+      filtered = documents.filter(doc => {
+        // Suche nach Dateiname
+        if (doc.filename.toLowerCase().includes(query)) return true;
+        
+        // Suche nach Kunde
+        if (doc.customer?.toLowerCase().includes(query)) return true;
+        
+        // Suche nach Betrag (z.B. "77.43" oder "77,43" oder "77")
+        if (doc.amount) {
+          const amountStr = doc.amount.toString();
+          const amountComma = doc.amount.toFixed(2).replace('.', ',');
+          if (amountStr.includes(query) || amountComma.includes(query)) return true;
+        }
+        
+        // Suche nach Datum (verschiedene Formate)
+        if (doc.date) {
+          const dateObj = new Date(doc.date);
+          // ISO Format: 2024-07-15
+          const isoDate = dateObj.toISOString().split('T')[0];
+          // DE Format: 15.07.2024
+          const deDate = dateObj.toLocaleDateString('de-DE');
+          // Jahr: 2024
+          const year = dateObj.getFullYear().toString();
+          // Monat: 07 oder 7
+          const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+          
+          if (isoDate.includes(query) || 
+              deDate.includes(query) || 
+              year.includes(query) || 
+              month.includes(query)) return true;
+        }
+        
+        return false;
+      });
     }
 
     const sorted = [...filtered].sort((a, b) => {
@@ -307,7 +339,10 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1>📚 Alle Dokumente</h1>
+        <div className="header-title">
+          <h1>📚 Alle Dokumente</h1>
+          <span className="app-version">{APP_VERSION}</span>
+        </div>
         <div className="header-actions">
           <button 
             onClick={loadDocuments} 
@@ -337,7 +372,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
         <Search size={20} />
         <input
           type="text"
-          placeholder="Suche nach Dateiname, Kunde oder Text..."
+          placeholder="Suche: Dateiname, Kunde, Datum, Betrag..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -395,7 +430,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                   )}
                 </div>
                 
-                {/* LÖSCHEN - LINKS OBEN */}
                 <div className="document-actions-left">
                   {doc.id && (
                     <button
@@ -411,7 +445,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                   )}
                 </div>
 
-                {/* ANSEHEN & BEARBEITEN - RECHTS OBEN */}
                 <div className="document-actions-right">
                   {doc.id && (
                     <>

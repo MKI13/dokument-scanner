@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Upload as UploadIcon, FileText, Calendar, Users, Copy } from 'lucide-react';
-import { Upload } from './pages/Upload';
-import { Modal } from './components/Modal/Modal';
+import { Camera } from './pages/Camera';
 import { AllDocuments } from './pages/AllDocuments';
-import { Calendar as CalendarPage } from './pages/Calendar';
 import { Customers } from './pages/Customers';
-import { Duplicates } from './pages/Duplicates';
+import { Camera as CameraIcon, FileText, Users } from 'lucide-react';
 import './App.css';
 
-type Page = 'upload' | 'documents' | 'calendar' | 'customers' | 'duplicates';
+const APP_VERSION = 'v1.5.2';
+
+type Page = 'scanner' | 'all-documents' | 'customers';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('upload');
+  const [currentPage, setCurrentPage] = useState<Page>('scanner');
   const [swipeEnabled, setSwipeEnabled] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   const minSwipeDistance = 50;
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -31,43 +30,26 @@ function App() {
   };
 
   const onTouchEnd = () => {
-    if (!swipeEnabled || !touchStart || !touchEnd) return;
+    if (!swipeEnabled) return;
+    if (!touchStart || !touchEnd) return;
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
-    if (isLeftSwipe || isRightSwipe) {
-      const pages: Page[] = ['upload', 'documents', 'calendar', 'customers', 'duplicates'];
-      const currentIndex = pages.indexOf(currentPage);
-      
-      if (isLeftSwipe && currentIndex < pages.length - 1) {
-        setCurrentPage(pages[currentIndex + 1]);
-      } else if (isRightSwipe && currentIndex > 0) {
-        setCurrentPage(pages[currentIndex - 1]);
-      }
+    if (isLeftSwipe) {
+      if (currentPage === 'scanner') setCurrentPage('all-documents');
+      else if (currentPage === 'all-documents') setCurrentPage('customers');
+    }
+
+    if (isRightSwipe) {
+      if (currentPage === 'customers') setCurrentPage('all-documents');
+      else if (currentPage === 'all-documents') setCurrentPage('scanner');
     }
   };
 
-  const handleUploadComplete = () => {
+  const handleDocumentSaved = () => {
     setRefreshTrigger(prev => prev + 1);
-  };
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'upload':
-        return <Upload setSwipeEnabled={setSwipeEnabled} />;
-      case 'documents':
-        return <AllDocuments setSwipeEnabled={setSwipeEnabled} refreshTrigger={refreshTrigger} />;
-      case 'calendar':
-        return <CalendarPage setSwipeEnabled={setSwipeEnabled} />;
-      case 'customers':
-        return <Customers setSwipeEnabled={setSwipeEnabled} />;
-      case 'duplicates':
-        return <Duplicates setSwipeEnabled={setSwipeEnabled} />;
-      default:
-        return null;
-    }
   };
 
   return (
@@ -77,54 +59,54 @@ function App() {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <header className="app-header">
-        <div className="app-icon">📄  <Modal />
-      </div>
-        <h1>Dokument Scanner</h1>
-      </header>
+      {currentPage === 'scanner' && (
+        <div className="page-wrapper">
+          <div className="page-header-scanner">
+            <div className="header-title">
+              <h1>📸 Dokument Scanner</h1>
+              <span className="app-version">{APP_VERSION}</span>
+            </div>
+          </div>
+          <Camera 
+            onDocumentSaved={handleDocumentSaved}
+            setSwipeEnabled={setSwipeEnabled}
+          />
+        </div>
+      )}
+      {currentPage === 'all-documents' && (
+        <AllDocuments 
+          setSwipeEnabled={setSwipeEnabled}
+          refreshTrigger={refreshTrigger}
+        />
+      )}
+      {currentPage === 'customers' && (
+        <Customers setSwipeEnabled={setSwipeEnabled} />
+      )}
 
-      <nav className="app-nav">
+      <nav className="bottom-nav">
         <button
-          className={`nav-button ${currentPage === 'upload' ? 'active' : ''}`}
-          onClick={() => setCurrentPage('upload')}
+          className={currentPage === 'scanner' ? 'active' : ''}
+          onClick={() => setCurrentPage('scanner')}
         >
-          <UploadIcon size={24} />
+          <CameraIcon size={24} />
+          <span>Scanner</span>
         </button>
-
         <button
-          className={`nav-button ${currentPage === 'documents' ? 'active' : ''}`}
-          onClick={() => setCurrentPage('documents')}
+          className={currentPage === 'all-documents' ? 'active' : ''}
+          onClick={() => setCurrentPage('all-documents')}
         >
           <FileText size={24} />
+          <span>Dokumente</span>
         </button>
-
         <button
-          className={`nav-button ${currentPage === 'calendar' ? 'active' : ''}`}
-          onClick={() => setCurrentPage('calendar')}
-        >
-          <Calendar size={24} />
-        </button>
-
-        <button
-          className={`nav-button ${currentPage === 'customers' ? 'active' : ''}`}
+          className={currentPage === 'customers' ? 'active' : ''}
           onClick={() => setCurrentPage('customers')}
         >
           <Users size={24} />
-        </button>
-
-        <button
-          className={`nav-button ${currentPage === 'duplicates' ? 'active' : ''}`}
-          onClick={() => setCurrentPage('duplicates')}
-        >
-          <Copy size={24} />
+          <span>Kunden</span>
         </button>
       </nav>
-
-      <main className="app-content">
-        {renderPage()}
-      </main>
-      <Modal />
-      </div>
+    </div>
   );
 }
 
