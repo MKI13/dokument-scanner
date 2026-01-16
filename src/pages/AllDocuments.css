@@ -398,3 +398,56 @@
 .sort-button:active {
   transform: scale(0.95);
 }
+
+/* ============================================
+   DOCUMENT ACTIONS (EDIT + DELETE)
+   ============================================ */
+
+.document-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.edit-button,
+.delete-button {
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid #334155;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.edit-button {
+  color: #0ea5e9;
+}
+
+.edit-button:hover {
+  background: #0ea5e9;
+  color: white;
+  border-color: #0ea5e9;
+  transform: scale(1.1);
+}
+
+.delete-button {
+  color: #ef4444;
+}
+
+.delete-button:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+  transform: scale(1.1);
+}
+
+.edit-button:active,
+.delete-button:active {
+  transform: scale(0.95);
+}
