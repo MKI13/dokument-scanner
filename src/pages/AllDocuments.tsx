@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../services/database.service';
 import { importService } from '../services/import.service';
+import { DocumentEditor } from '../components/DocumentEditor';
 import { modalService } from '../services/modal.service';
 import { stateService } from '../services/state.service';
 import { Document } from '../types/document';

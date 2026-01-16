@@ -1,0 +1,256 @@
+import React, { useState, useEffect } from 'react';
+import { Document } from '../types/document';
+import { db } from '../services/database.service';
+import { modalService } from '../services/modal.service';
+import { X, Save, Calendar, DollarSign, User, Hash, Tag } from 'lucide-react';
+import './DocumentEditor.css';
+
+interface DocumentEditorProps {
+  document: Document;
+  onClose: () => void;
+  onSave: () => void;
+}
+
+export const DocumentEditor: React.FC<DocumentEditorProps> = ({
+  document,
+  onClose,
+  onSave
+}) => {
+  const [filename, setFilename] = useState(document.filename);
+  const [customer, setCustomer] = useState(document.customer || '');
+  const [amount, setAmount] = useState(document.amount?.toString() || '');
+  const [invoiceNumber, setInvoiceNumber] = useState(document.invoiceNumber || '');
+  const [date, setDate] = useState(
+    document.date ? new Date(document.date).toISOString().split('T')[0] : ''
+  );
+  const [tags, setTags] = useState(document.tags?.join(', ') || '');
+  const [ocrText, setOcrText] = useState(document.ocrText || '');
+  const [saving, setSaving] = useState(false);
+
+  const [allCustomers, setAllCustomers] = useState<string[]>([]);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+
+  useEffect(() => {
+    loadCustomers();
+  }, []);
+
+  const loadCustomers = async () => {
+    const docs = await db.documents.toArray();
+    const customers = new Set<string>();
+    docs.forEach(doc => {
+      if (doc.customer) customers.add(doc.customer);
+    });
+    setAllCustomers(Array.from(customers).sort());
+  };
+
+  const handleSave = async () => {
+    if (!document.id) return;
+
+    setSaving(true);
+
+    try {
+      const updates: Partial<Document> = {
+        filename: filename.trim(),
+        customer: customer.trim() || undefined,
+        amount: amount ? parseFloat(amount) : undefined,
+        invoiceNumber: invoiceNumber.trim() || undefined,
+        date: date ? new Date(date) : undefined,
+        tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+        ocrText: ocrText.trim() || undefined
+      };
+
+      await db.documents.update(document.id, updates);
+      
+      await modalService.success('✅ Änderungen gespeichert!');
+      onSave();
+      onClose();
+
+    } catch (error) {
+      console.error('Fehler beim Speichern:', error);
+      await modalService.error('Fehler beim Speichern der Änderungen');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    const hasChanges = 
+      filename !== document.filename ||
+      customer !== (document.customer || '') ||
+      amount !== (document.amount?.toString() || '') ||
+      invoiceNumber !== (document.invoiceNumber || '') ||
+      date !== (document.date ? new Date(document.date).toISOString().split('T')[0] : '') ||
+      tags !== (document.tags?.join(', ') || '') ||
+      ocrText !== (document.ocrText || '');
+
+    if (hasChanges) {
+      const confirmed = await modalService.confirm(
+        'Änderungen verwerfen?',
+        'Ungespeicherte Änderungen'
+      );
+      if (!confirmed) return;
+    }
+
+    onClose();
+  };
+
+  const filteredCustomers = allCustomers.filter(c =>
+    c.toLowerCase().includes(customer.toLowerCase())
+  );
+
+  return (
+    <div className="document-editor-overlay" onClick={onClose}>
+      <div className="document-editor" onClick={(e) => e.stopPropagation()}>
+        <div className="editor-header">
+          <h2>Dokument bearbeiten</h2>
+          <button onClick={onClose} className="editor-close">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="editor-content">
+          {/* Bild-Vorschau */}
+          <div className="editor-preview">
+            <img 
+              src={URL.createObjectURL(document.blob)} 
+              alt={document.filename}
+            />
+          </div>
+
+          {/* Dateiname */}
+          <div className="editor-field">
+            <label>
+              <Hash size={16} />
+              <span>Dateiname</span>
+            </label>
+            <input
+              type="text"
+              value={filename}
+              onChange={(e) => setFilename(e.target.value)}
+              placeholder="Dateiname..."
+            />
+          </div>
+
+          {/* Kunde */}
+          <div className="editor-field">
+            <label>
+              <User size={16} />
+              <span>Kunde</span>
+            </label>
+            <div className="autocomplete-wrapper">
+              <input
+                type="text"
+                value={customer}
+                onChange={(e) => {
+                  setCustomer(e.target.value);
+                  setShowCustomerSuggestions(true);
+                }}
+                onFocus={() => setShowCustomerSuggestions(true)}
+                placeholder="Kunde..."
+              />
+              {showCustomerSuggestions && customer && filteredCustomers.length > 0 && (
+                <div className="autocomplete-suggestions">
+                  {filteredCustomers.slice(0, 5).map(c => (
+                    <div
+                      key={c}
+                      className="autocomplete-item"
+                      onClick={() => {
+                        setCustomer(c);
+                        setShowCustomerSuggestions(false);
+                      }}
+                    >
+                      {c}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Betrag */}
+          <div className="editor-field">
+            <label>
+              <DollarSign size={16} />
+              <span>Betrag (EUR)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
+
+          {/* Rechnungsnummer */}
+          <div className="editor-field">
+            <label>
+              <Hash size={16} />
+              <span>Rechnungsnummer</span>
+            </label>
+            <input
+              type="text"
+              value={invoiceNumber}
+              onChange={(e) => setInvoiceNumber(e.target.value)}
+              placeholder="RE-2025-001..."
+            />
+          </div>
+
+          {/* Datum */}
+          <div className="editor-field">
+            <label>
+              <Calendar size={16} />
+              <span>Rechnungsdatum</span>
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+
+          {/* Tags */}
+          <div className="editor-field">
+            <label>
+              <Tag size={16} />
+              <span>Tags (komma-getrennt)</span>
+            </label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="2025-01, Büromaterial, ..."
+            />
+          </div>
+
+          {/* OCR Text */}
+          <div className="editor-field">
+            <label>
+              <span>OCR Text</span>
+            </label>
+            <textarea
+              value={ocrText}
+              onChange={(e) => setOcrText(e.target.value)}
+              placeholder="Erkannter Text..."
+              rows={6}
+            />
+          </div>
+        </div>
+
+        <div className="editor-footer">
+          <button onClick={handleCancel} className="editor-cancel">
+            Abbrechen
+          </button>
+          <button 
+            onClick={handleSave} 
+            className="editor-save"
+            disabled={saving}
+          >
+            <Save size={16} />
+            <span>{saving ? 'Speichere...' : 'Speichern'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
