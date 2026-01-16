@@ -447,6 +447,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       {/* Document Viewer */}
       {viewingDocument && (
         <DocumentViewer
+          setSwipeEnabled={setSwipeEnabled}
           document={viewingDocument}
           onClose={handleViewerClose}
         />
@@ -455,6 +456,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       {/* Document Editor */}
       {editingDocument && (
         <DocumentEditor
+          setSwipeEnabled={setSwipeEnabled}
           document={editingDocument}
           onClose={handleEditorClose}
           onSave={handleEditorSave}

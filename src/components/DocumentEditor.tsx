@@ -9,12 +9,14 @@ interface DocumentEditorProps {
   document: Document;
   onClose: () => void;
   onSave: () => void;
+  setSwipeEnabled?: (enabled: boolean) => void;
 }
 
 export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   document,
   onClose,
-  onSave
+  onSave,
+  setSwipeEnabled
 }) => {
   const [filename, setFilename] = useState(document.filename);
   const [customer, setCustomer] = useState(document.customer || '');
@@ -30,9 +32,21 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [allCustomers, setAllCustomers] = useState<string[]>([]);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
 
+  // Deaktiviere Swipe beim Öffnen
   useEffect(() => {
+    if (setSwipeEnabled) {
+      setSwipeEnabled(false);
+    }
+    
     loadCustomers();
-  }, []);
+    
+    // Aktiviere Swipe beim Schließen
+    return () => {
+      if (setSwipeEnabled) {
+        setSwipeEnabled(true);
+      }
+    };
+  }, [setSwipeEnabled]);
 
   const loadCustomers = async () => {
     const docs = await db.documents.toArray();
@@ -103,13 +117,12 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       <div className="document-editor" onClick={(e) => e.stopPropagation()}>
         <div className="editor-header">
           <h2>Dokument bearbeiten</h2>
-          <button onClick={onClose} className="editor-close">
-            <X size={20} />
+          <button onClick={onClose} className="editor-close" title="Schließen">
+            <X size={24} />
           </button>
         </div>
 
         <div className="editor-content">
-          {/* Bild-Vorschau */}
           <div className="editor-preview">
             <img 
               src={URL.createObjectURL(document.blob)} 
@@ -117,7 +130,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Dateiname */}
           <div className="editor-field">
             <label>
               <Hash size={16} />
@@ -131,7 +143,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Kunde */}
           <div className="editor-field">
             <label>
               <User size={16} />
@@ -167,7 +178,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             </div>
           </div>
 
-          {/* Betrag */}
           <div className="editor-field">
             <label>
               <DollarSign size={16} />
@@ -182,7 +192,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Rechnungsnummer */}
           <div className="editor-field">
             <label>
               <Hash size={16} />
@@ -196,7 +205,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Datum */}
           <div className="editor-field">
             <label>
               <Calendar size={16} />
@@ -209,7 +217,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Tags */}
           <div className="editor-field">
             <label>
               <Tag size={16} />
@@ -223,7 +230,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* OCR Text */}
           <div className="editor-field">
             <label>
               <span>OCR Text</span>

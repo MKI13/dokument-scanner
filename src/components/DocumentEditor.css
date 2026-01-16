@@ -17,15 +17,6 @@
   animation: fadeIn 0.2s ease-out;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 .document-editor {
   background: #1e293b;
   border: 2px solid #334155;
@@ -39,17 +30,6 @@
   animation: slideUp 0.3s ease-out;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 .editor-header {
   display: flex;
   justify-content: space-between;
@@ -58,6 +38,8 @@
   background: #0f172a;
   border-bottom: 2px solid #334155;
   border-radius: 14px 14px 0 0;
+  position: relative;
+  z-index: 10;
 }
 
 .editor-header h2 {
@@ -67,18 +49,29 @@
 }
 
 .editor-close {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
+  background: #ef4444;
+  border: 2px solid #dc2626;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  flex-shrink: 0;
 }
 
 .editor-close:hover {
-  background: #334155;
-  color: #f1f5f9;
+  background: #dc2626;
+  border-color: #b91c1c;
+  transform: scale(1.05);
+}
+
+.editor-close:active {
+  transform: scale(0.95);
 }
 
 .editor-content {
@@ -143,7 +136,6 @@
   min-height: 80px;
 }
 
-/* Autocomplete */
 .autocomplete-wrapper {
   position: relative;
 }
@@ -224,26 +216,38 @@
 }
 
 /* ============================================
-   RESPONSIVE
+   RESPONSIVE - MOBILE
    ============================================ */
 
 @media (max-width: 768px) {
   .document-editor-overlay {
     padding: 0;
+    align-items: flex-start;
   }
 
   .document-editor {
     max-width: 100%;
     max-height: 100vh;
+    height: 100vh;
     border-radius: 0;
+    margin: 0;
   }
 
   .editor-header {
     border-radius: 0;
+    padding: 16px;
+    /* WICHTIG: Sicherer Abstand von oben für Mobile Browser */
+    padding-top: max(16px, env(safe-area-inset-top));
   }
 
-  .editor-footer {
-    border-radius: 0;
+  .editor-header h2 {
+    font-size: 18px;
+  }
+
+  .editor-close {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
   }
 
   .editor-content {
@@ -253,26 +257,25 @@
   .editor-preview {
     height: 150px;
   }
+
+  .editor-footer {
+    border-radius: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
 }
 
-/* Verbesserter Close Button */
-.editor-close {
-  background: #ef4444 !important;
-  border: 2px solid #dc2626 !important;
-  color: white !important;
-  padding: 10px !important;
-  border-radius: 8px !important;
-  font-size: 18px !important;
-  min-width: 40px !important;
-  min-height: 40px !important;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.editor-close:hover {
-  background: #dc2626 !important;
-  border-color: #b91c1c !important;
-  transform: scale(1.1);
-}
-
-.editor-close:active {
-  transform: scale(0.95);
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Document } from '../types/document';
 import { X, Calendar, DollarSign, User, Hash, Tag, FileText } from 'lucide-react';
 import './DocumentViewer.css';
@@ -6,24 +6,39 @@ import './DocumentViewer.css';
 interface DocumentViewerProps {
   document: Document;
   onClose: () => void;
+  setSwipeEnabled?: (enabled: boolean) => void;
 }
 
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   document,
-  onClose
+  onClose,
+  setSwipeEnabled
 }) => {
+  // Deaktiviere Swipe beim Öffnen
+  useEffect(() => {
+    if (setSwipeEnabled) {
+      setSwipeEnabled(false);
+    }
+    
+    // Aktiviere Swipe beim Schließen
+    return () => {
+      if (setSwipeEnabled) {
+        setSwipeEnabled(true);
+      }
+    };
+  }, [setSwipeEnabled]);
+
   return (
     <div className="document-viewer-overlay" onClick={onClose}>
       <div className="document-viewer" onClick={(e) => e.stopPropagation()}>
         <div className="viewer-header">
           <h2>Dokument-Ansicht</h2>
-          <button onClick={onClose} className="viewer-close">
-            <X size={20} />
+          <button onClick={onClose} className="viewer-close" title="Schließen">
+            <X size={24} />
           </button>
         </div>
 
         <div className="viewer-content">
-          {/* Bild/PDF Vollansicht */}
           <div className="viewer-image">
             <img 
               src={URL.createObjectURL(document.blob)} 
@@ -31,12 +46,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
             />
           </div>
 
-          {/* Dokument-Informationen */}
           <div className="viewer-info">
             <h3>Informationen</h3>
 
             <div className="info-grid">
-              {/* Dateiname */}
               <div className="info-item">
                 <div className="info-label">
                   <Hash size={16} />
@@ -45,7 +58,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 <div className="info-value">{document.filename}</div>
               </div>
 
-              {/* Kunde */}
               {document.customer && (
                 <div className="info-item">
                   <div className="info-label">
@@ -56,7 +68,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
               )}
 
-              {/* Betrag */}
               {document.amount && (
                 <div className="info-item">
                   <div className="info-label">
@@ -67,7 +78,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
               )}
 
-              {/* Rechnungsnummer */}
               {document.invoiceNumber && (
                 <div className="info-item">
                   <div className="info-label">
@@ -78,7 +88,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
               )}
 
-              {/* Datum */}
               {document.date && (
                 <div className="info-item">
                   <div className="info-label">
@@ -91,7 +100,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
               )}
 
-              {/* Upload-Datum */}
               <div className="info-item">
                 <div className="info-label">
                   <Calendar size={16} />
@@ -102,7 +110,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
               </div>
 
-              {/* Tags */}
               {document.tags && document.tags.length > 0 && (
                 <div className="info-item full-width">
                   <div className="info-label">
@@ -117,7 +124,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
               )}
 
-              {/* OCR Text */}
               {document.ocrText && (
                 <div className="info-item full-width">
                   <div className="info-label">
