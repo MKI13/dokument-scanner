@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Camera } from './pages/Camera';
+import React, { useState } from 'react';
+import { Scanner } from './pages/Scanner';
 import { AllDocuments } from './pages/AllDocuments';
 import { Customers } from './pages/Customers';
 import { Camera as CameraIcon, FileText, Users } from 'lucide-react';
@@ -67,7 +67,7 @@ function App() {
               <span className="app-version">{APP_VERSION}</span>
             </div>
           </div>
-          <Camera 
+          <Scanner 
             onDocumentSaved={handleDocumentSaved}
             setSwipeEnabled={setSwipeEnabled}
           />
