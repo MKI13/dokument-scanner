@@ -31,6 +31,9 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
   const [allCustomers, setAllCustomers] = useState<string[]>([]);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  
+  // Track if filename was manually changed
+  const [filenameManuallyChanged, setFilenameManuallyChanged] = useState(false);
 
   // Deaktiviere Swipe beim Öffnen
   useEffect(() => {
@@ -55,6 +58,33 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       if (doc.customer) customers.add(doc.customer);
     });
     setAllCustomers(Array.from(customers).sort());
+  };
+
+  // AUTO-RENAME: Wenn Kunde sich ändert, aktualisiere Dateiname
+  const handleCustomerChange = (newCustomer: string) => {
+    setCustomer(newCustomer);
+    
+    // Nur automatisch umbenennen wenn Dateiname nicht manuell geändert wurde
+    if (!filenameManuallyChanged) {
+      const fileExtension = filename.includes('.') 
+        ? '.' + filename.split('.').pop() 
+        : '.jpg';
+      
+      if (newCustomer.trim()) {
+        // Erstelle neuen Dateinamen: Kunde_Datum.ext oder Kunde_Timestamp.ext
+        const timestamp = date 
+          ? new Date(date).toISOString().split('T')[0] 
+          : new Date().toISOString().split('T')[0];
+        
+        const newFilename = `${newCustomer.trim()}_${timestamp}${fileExtension}`;
+        setFilename(newFilename);
+      }
+    }
+  };
+
+  const handleFilenameChange = (newFilename: string) => {
+    setFilename(newFilename);
+    setFilenameManuallyChanged(true);
   };
 
   const handleSave = async () => {
@@ -130,34 +160,19 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          <div className="editor-field">
-            <label>
-              <Hash size={16} />
-              <span>Dateiname</span>
-            </label>
-            <input
-              type="text"
-              value={filename}
-              onChange={(e) => setFilename(e.target.value)}
-              placeholder="Dateiname..."
-            />
-          </div>
-
+          {/* KUNDE ZUERST - für Auto-Rename */}
           <div className="editor-field">
             <label>
               <User size={16} />
-              <span>Kunde</span>
+              <span>Kunde (automatisch → Dateiname)</span>
             </label>
             <div className="autocomplete-wrapper">
               <input
                 type="text"
                 value={customer}
-                onChange={(e) => {
-                  setCustomer(e.target.value);
-                  setShowCustomerSuggestions(true);
-                }}
+                onChange={(e) => handleCustomerChange(e.target.value)}
                 onFocus={() => setShowCustomerSuggestions(true)}
-                placeholder="Kunde..."
+                placeholder="Kunde eingeben..."
               />
               {showCustomerSuggestions && customer && filteredCustomers.length > 0 && (
                 <div className="autocomplete-suggestions">
@@ -166,7 +181,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
                       key={c}
                       className="autocomplete-item"
                       onClick={() => {
-                        setCustomer(c);
+                        handleCustomerChange(c);
                         setShowCustomerSuggestions(false);
                       }}
                     >
@@ -178,6 +193,21 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             </div>
           </div>
 
+          {/* Dateiname */}
+          <div className="editor-field">
+            <label>
+              <Hash size={16} />
+              <span>Dateiname</span>
+            </label>
+            <input
+              type="text"
+              value={filename}
+              onChange={(e) => handleFilenameChange(e.target.value)}
+              placeholder="Dateiname..."
+            />
+          </div>
+
+          {/* Betrag */}
           <div className="editor-field">
             <label>
               <DollarSign size={16} />
@@ -192,6 +222,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
+          {/* Rechnungsnummer */}
           <div className="editor-field">
             <label>
               <Hash size={16} />
@@ -205,6 +236,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
+          {/* Datum */}
           <div className="editor-field">
             <label>
               <Calendar size={16} />
@@ -217,6 +249,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
+          {/* Tags */}
           <div className="editor-field">
             <label>
               <Tag size={16} />
@@ -230,6 +263,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
+          {/* OCR Text */}
           <div className="editor-field">
             <label>
               <span>OCR Text</span>

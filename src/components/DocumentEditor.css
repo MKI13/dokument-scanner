@@ -40,6 +40,7 @@
   border-radius: 14px 14px 0 0;
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .editor-header h2 {
@@ -174,6 +175,9 @@
   border-radius: 0 0 14px 14px;
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .editor-cancel,
@@ -190,6 +194,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 48px;
 }
 
 .editor-cancel {
@@ -228,6 +233,7 @@
   .document-editor {
     max-width: 100%;
     max-height: 100vh;
+    min-height: 100vh;
     height: 100vh;
     border-radius: 0;
     margin: 0;
@@ -235,9 +241,9 @@
 
   .editor-header {
     border-radius: 0;
-    padding: 16px;
-    /* WICHTIG: Sicherer Abstand von oben für Mobile Browser */
-    padding-top: max(16px, env(safe-area-inset-top));
+    padding: 12px 16px;
+    /* WICHTIG: Sicherer Abstand von oben */
+    padding-top: max(12px, env(safe-area-inset-top));
   }
 
   .editor-header h2 {
@@ -252,6 +258,8 @@
 
   .editor-content {
     padding: 16px;
+    /* WICHTIG: Padding unten für Footer */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 
   .editor-preview {
@@ -260,7 +268,31 @@
 
   .editor-footer {
     border-radius: 0;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding: 12px 16px;
+    /* WICHTIG: Sicherer Abstand von unten */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    /* WICHTIG: Footer fixiert unten */
+    position: sticky;
+    bottom: 0;
+    background: #0f172a;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .editor-cancel,
+  .editor-save {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+/* Extra für sehr kleine Screens */
+@media (max-height: 600px) {
+  .editor-preview {
+    height: 120px;
+  }
+  
+  .editor-field {
+    margin-bottom: 16px;
   }
 }
 
