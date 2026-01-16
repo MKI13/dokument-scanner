@@ -32,10 +32,8 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [allCustomers, setAllCustomers] = useState<string[]>([]);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   
-  // Track if filename was manually changed
   const [filenameManuallyChanged, setFilenameManuallyChanged] = useState(false);
 
-  // Deaktiviere Swipe beim Öffnen
   useEffect(() => {
     if (setSwipeEnabled) {
       setSwipeEnabled(false);
@@ -43,7 +41,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     
     loadCustomers();
     
-    // Aktiviere Swipe beim Schließen
     return () => {
       if (setSwipeEnabled) {
         setSwipeEnabled(true);
@@ -60,7 +57,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     setAllCustomers(Array.from(customers).sort());
   };
 
-  // Generiere Dateiname: DATUM_KUNDE_BETRAG.jpg
   const generateFilename = () => {
     if (filenameManuallyChanged) return;
 
@@ -70,45 +66,37 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
     const parts: string[] = [];
 
-    // 1. DATUM (immer wenn vorhanden)
     if (date) {
       parts.push(date);
     }
 
-    // 2. KUNDE (immer wenn vorhanden)
     if (customer.trim()) {
       parts.push(customer.trim().replace(/\s+/g, '_'));
     }
 
-    // 3. BETRAG (immer wenn vorhanden)
     if (amount && parseFloat(amount) > 0) {
       const formattedAmount = parseFloat(amount).toFixed(2).replace('.', ',');
       parts.push(`${formattedAmount}EUR`);
     }
 
-    // Wenn mindestens ein Teil vorhanden, erstelle Dateinamen
     if (parts.length > 0) {
       const newFilename = parts.join('_') + fileExtension;
       setFilename(newFilename);
     }
   };
 
-  // AUTO-UPDATE bei Kunde-Änderung
   const handleCustomerChange = (newCustomer: string) => {
     setCustomer(newCustomer);
   };
 
-  // AUTO-UPDATE bei Betrag-Änderung
   const handleAmountChange = (newAmount: string) => {
     setAmount(newAmount);
   };
 
-  // AUTO-UPDATE bei Datum-Änderung
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
   };
 
-  // Trigger filename generation when dependencies change
   useEffect(() => {
     generateFilename();
   }, [customer, amount, date]);
@@ -136,15 +124,19 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
       await db.documents.update(document.id, updates);
       
-      await modalService.success('✅ Änderungen gespeichert!');
+      // WICHTIG: Erst schließen und Liste aktualisieren
       onSave();
       onClose();
+      
+      // DANN Erfolgsmeldung zeigen
+      await modalService.success('✅ Änderungen gespeichert!');
 
     } catch (error) {
       console.error('Fehler beim Speichern:', error);
-      await modalService.error('Fehler beim Speichern der Änderungen');
-    } finally {
       setSaving(false);
+      
+      // Bei Fehler: Modal offen lassen und Fehler zeigen
+      await modalService.error('❌ Fehler beim Speichern der Änderungen');
     }
   };
 
@@ -191,12 +183,10 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* HINWEIS */}
           <div className="auto-rename-hint">
             ℹ️ Format: DATUM_KUNDE_BETRAG.jpg
           </div>
 
-          {/* Datum ZUERST */}
           <div className="editor-field">
             <label>
               <Calendar size={16} />
@@ -209,7 +199,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* KUNDE */}
           <div className="editor-field">
             <label>
               <User size={16} />
@@ -242,7 +231,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             </div>
           </div>
 
-          {/* Betrag */}
           <div className="editor-field">
             <label>
               <DollarSign size={16} />
@@ -257,7 +245,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Dateiname (AUTO-GENERIERT) */}
           <div className="editor-field">
             <label>
               <Hash size={16} />
@@ -271,7 +258,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Rechnungsnummer */}
           <div className="editor-field">
             <label>
               <Hash size={16} />
@@ -285,7 +271,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* Tags */}
           <div className="editor-field">
             <label>
               <Tag size={16} />
@@ -299,7 +284,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* OCR Text */}
           <div className="editor-field">
             <label>
               <span>OCR Text</span>
