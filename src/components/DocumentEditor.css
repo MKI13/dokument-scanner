@@ -311,3 +311,24 @@
     opacity: 1;
   }
 }
+
+/* Auto-Rename Hinweis */
+.auto-rename-hint {
+  background: #0ea5e9;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .auto-rename-hint {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}

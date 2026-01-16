@@ -60,27 +60,58 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     setAllCustomers(Array.from(customers).sort());
   };
 
-  // AUTO-RENAME: Wenn Kunde sich ändert, aktualisiere Dateiname
-  const handleCustomerChange = (newCustomer: string) => {
-    setCustomer(newCustomer);
-    
-    // Nur automatisch umbenennen wenn Dateiname nicht manuell geändert wurde
-    if (!filenameManuallyChanged) {
-      const fileExtension = filename.includes('.') 
-        ? '.' + filename.split('.').pop() 
-        : '.jpg';
-      
-      if (newCustomer.trim()) {
-        // Erstelle neuen Dateinamen: Kunde_Datum.ext oder Kunde_Timestamp.ext
-        const timestamp = date 
-          ? new Date(date).toISOString().split('T')[0] 
-          : new Date().toISOString().split('T')[0];
-        
-        const newFilename = `${newCustomer.trim()}_${timestamp}${fileExtension}`;
-        setFilename(newFilename);
-      }
+  // Generiere Dateiname: DATUM_KUNDE_BETRAG.jpg
+  const generateFilename = () => {
+    if (filenameManuallyChanged) return;
+
+    const fileExtension = filename.includes('.') 
+      ? '.' + filename.split('.').pop() 
+      : '.jpg';
+
+    const parts: string[] = [];
+
+    // 1. DATUM (immer wenn vorhanden)
+    if (date) {
+      parts.push(date);
+    }
+
+    // 2. KUNDE (immer wenn vorhanden)
+    if (customer.trim()) {
+      parts.push(customer.trim().replace(/\s+/g, '_'));
+    }
+
+    // 3. BETRAG (immer wenn vorhanden)
+    if (amount && parseFloat(amount) > 0) {
+      const formattedAmount = parseFloat(amount).toFixed(2).replace('.', ',');
+      parts.push(`${formattedAmount}EUR`);
+    }
+
+    // Wenn mindestens ein Teil vorhanden, erstelle Dateinamen
+    if (parts.length > 0) {
+      const newFilename = parts.join('_') + fileExtension;
+      setFilename(newFilename);
     }
   };
+
+  // AUTO-UPDATE bei Kunde-Änderung
+  const handleCustomerChange = (newCustomer: string) => {
+    setCustomer(newCustomer);
+  };
+
+  // AUTO-UPDATE bei Betrag-Änderung
+  const handleAmountChange = (newAmount: string) => {
+    setAmount(newAmount);
+  };
+
+  // AUTO-UPDATE bei Datum-Änderung
+  const handleDateChange = (newDate: string) => {
+    setDate(newDate);
+  };
+
+  // Trigger filename generation when dependencies change
+  useEffect(() => {
+    generateFilename();
+  }, [customer, amount, date]);
 
   const handleFilenameChange = (newFilename: string) => {
     setFilename(newFilename);
@@ -160,11 +191,29 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             />
           </div>
 
-          {/* KUNDE ZUERST - für Auto-Rename */}
+          {/* HINWEIS */}
+          <div className="auto-rename-hint">
+            ℹ️ Format: DATUM_KUNDE_BETRAG.jpg
+          </div>
+
+          {/* Datum ZUERST */}
+          <div className="editor-field">
+            <label>
+              <Calendar size={16} />
+              <span>Rechnungsdatum</span>
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => handleDateChange(e.target.value)}
+            />
+          </div>
+
+          {/* KUNDE */}
           <div className="editor-field">
             <label>
               <User size={16} />
-              <span>Kunde (automatisch → Dateiname)</span>
+              <span>Kunde</span>
             </label>
             <div className="autocomplete-wrapper">
               <input
@@ -193,20 +242,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             </div>
           </div>
 
-          {/* Dateiname */}
-          <div className="editor-field">
-            <label>
-              <Hash size={16} />
-              <span>Dateiname</span>
-            </label>
-            <input
-              type="text"
-              value={filename}
-              onChange={(e) => handleFilenameChange(e.target.value)}
-              placeholder="Dateiname..."
-            />
-          </div>
-
           {/* Betrag */}
           <div className="editor-field">
             <label>
@@ -217,8 +252,22 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               type="number"
               step="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
+              onChange={(e) => handleAmountChange(e.target.value)}
+              placeholder="77.43"
+            />
+          </div>
+
+          {/* Dateiname (AUTO-GENERIERT) */}
+          <div className="editor-field">
+            <label>
+              <Hash size={16} />
+              <span>Dateiname (auto-generiert)</span>
+            </label>
+            <input
+              type="text"
+              value={filename}
+              onChange={(e) => handleFilenameChange(e.target.value)}
+              placeholder="2024-07-15_Prosol_Farben_77,43EUR.jpg"
             />
           </div>
 
@@ -233,19 +282,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               value={invoiceNumber}
               onChange={(e) => setInvoiceNumber(e.target.value)}
               placeholder="RE-2025-001..."
-            />
-          </div>
-
-          {/* Datum */}
-          <div className="editor-field">
-            <label>
-              <Calendar size={16} />
-              <span>Rechnungsdatum</span>
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
             />
           </div>
 
