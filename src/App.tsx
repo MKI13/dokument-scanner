@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { Upload } from './pages/Upload';
 import { AllDocuments } from './pages/AllDocuments';
 import { Customers } from './pages/Customers';
-import { Camera as CameraIcon, FileText, Users } from 'lucide-react';
+import { MonthView } from './pages/MonthView';
+import { Duplicates } from './pages/Duplicates';
+import { Calendar } from './pages/Calendar';
+import { Upload as UploadIcon, FileText, Users, Calendar as CalendarIcon, Copy, Folder } from 'lucide-react';
 import './App.css';
 
 const APP_VERSION = 'v1.5.2';
 
-type Page = 'scanner' | 'all-documents' | 'customers';
+type Page = 'upload' | 'documents' | 'customers' | 'month' | 'duplicates' | 'calendar';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('scanner');
+  const [currentPage, setCurrentPage] = useState<Page>('upload');
   const [swipeEnabled, setSwipeEnabled] = useState(true);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -37,14 +40,15 @@ function App() {
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
-    if (isLeftSwipe) {
-      if (currentPage === 'scanner') setCurrentPage('all-documents');
-      else if (currentPage === 'all-documents') setCurrentPage('customers');
+    const pages: Page[] = ['upload', 'documents', 'customers', 'month', 'duplicates', 'calendar'];
+    const currentIndex = pages.indexOf(currentPage);
+
+    if (isLeftSwipe && currentIndex < pages.length - 1) {
+      setCurrentPage(pages[currentIndex + 1]);
     }
 
-    if (isRightSwipe) {
-      if (currentPage === 'customers') setCurrentPage('all-documents');
-      else if (currentPage === 'all-documents') setCurrentPage('scanner');
+    if (isRightSwipe && currentIndex > 0) {
+      setCurrentPage(pages[currentIndex - 1]);
     }
   };
 
@@ -59,7 +63,7 @@ function App() {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {currentPage === 'scanner' && (
+      {currentPage === 'upload' && (
         <div className="page-wrapper">
           <div className="page-header-scanner">
             <div className="header-title">
@@ -73,37 +77,78 @@ function App() {
           />
         </div>
       )}
-      {currentPage === 'all-documents' && (
+
+      {currentPage === 'documents' && (
         <AllDocuments 
           setSwipeEnabled={setSwipeEnabled}
           refreshTrigger={refreshTrigger}
         />
       )}
+
       {currentPage === 'customers' && (
         <Customers setSwipeEnabled={setSwipeEnabled} />
       )}
 
+      {currentPage === 'month' && (
+        <MonthView setSwipeEnabled={setSwipeEnabled} />
+      )}
+
+      {currentPage === 'duplicates' && (
+        <Duplicates setSwipeEnabled={setSwipeEnabled} />
+      )}
+
+      {currentPage === 'calendar' && (
+        <Calendar setSwipeEnabled={setSwipeEnabled} />
+      )}
+
       <nav className="bottom-nav">
         <button
-          className={currentPage === 'scanner' ? 'active' : ''}
-          onClick={() => setCurrentPage('scanner')}
+          className={currentPage === 'upload' ? 'active' : ''}
+          onClick={() => setCurrentPage('upload')}
+          title="Scanner"
         >
-          <CameraIcon size={24} />
+          <UploadIcon size={20} />
           <span>Scanner</span>
         </button>
         <button
-          className={currentPage === 'all-documents' ? 'active' : ''}
-          onClick={() => setCurrentPage('all-documents')}
+          className={currentPage === 'documents' ? 'active' : ''}
+          onClick={() => setCurrentPage('documents')}
+          title="Alle Dokumente"
         >
-          <FileText size={24} />
+          <FileText size={20} />
           <span>Dokumente</span>
         </button>
         <button
           className={currentPage === 'customers' ? 'active' : ''}
           onClick={() => setCurrentPage('customers')}
+          title="Kunden"
         >
-          <Users size={24} />
+          <Users size={20} />
           <span>Kunden</span>
+        </button>
+        <button
+          className={currentPage === 'month' ? 'active' : ''}
+          onClick={() => setCurrentPage('month')}
+          title="Monat"
+        >
+          <Folder size={20} />
+          <span>Monat</span>
+        </button>
+        <button
+          className={currentPage === 'duplicates' ? 'active' : ''}
+          onClick={() => setCurrentPage('duplicates')}
+          title="Duplikate"
+        >
+          <Copy size={20} />
+          <span>Duplikate</span>
+        </button>
+        <button
+          className={currentPage === 'calendar' ? 'active' : ''}
+          onClick={() => setCurrentPage('calendar')}
+          title="Kalender"
+        >
+          <CalendarIcon size={20} />
+          <span>Kalender</span>
         </button>
       </nav>
     </div>
