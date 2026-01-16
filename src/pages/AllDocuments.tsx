@@ -395,8 +395,24 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                   )}
                 </div>
                 
+                {/* LÖSCHEN - LINKS OBEN */}
+                <div className="document-actions-left">
+                  {doc.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(doc);
+                      }}
+                      className="delete-button"
+                      title="Löschen"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+
                 {/* ANSEHEN & BEARBEITEN - RECHTS OBEN */}
-                <div className="document-actions-top">
+                <div className="document-actions-right">
                   {doc.id && (
                     <>
                       <button
@@ -420,22 +436,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                         <Edit2 size={18} />
                       </button>
                     </>
-                  )}
-                </div>
-
-                {/* LÖSCHEN - LINKS UNTEN */}
-                <div className="document-actions-bottom">
-                  {doc.id && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(doc);
-                      }}
-                      className="delete-button"
-                      title="Löschen"
-                    >
-                      <Trash2 size={18} />
-                    </button>
                   )}
                 </div>
               </div>
