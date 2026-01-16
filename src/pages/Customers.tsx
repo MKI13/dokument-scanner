@@ -1,187 +1,115 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
 import { stateService } from '../services/state.service';
+import { CustomerView } from './CustomerView';
 import { Document } from '../types/document';
-import { ArrowUpDown, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { User, Search } from 'lucide-react';
 import './Customers.css';
+
+const APP_VERSION = 'v1.5.3';
 
 interface CustomersProps {
   setSwipeEnabled: (enabled: boolean) => void;
 }
 
-type CustomerSortOption = 'alphabet' | 'count' | 'recent';
-
 interface CustomerData {
   name: string;
-  count: number;
+  documentCount: number;
   totalAmount: number;
-  lastDate?: Date;
-  documents: Document[];
+  latestDocument?: Document;
 }
 
 export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  
-  // WICHTIG: State aus localStorage laden BEI COMPONENT MOUNT
-  const [initialized, setInitialized] = useState(false);
   const [customers, setCustomers] = useState<CustomerData[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<CustomerSortOption>('alphabet');
-  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
-
-  // Lade gespeicherten State beim ersten Render
-  useEffect(() => {
-    console.log('🔄 Customers Component mounted');
-    const savedState = stateService.getCustomersState();
-    
-    setSearchQuery(savedState.searchQuery);
-    setSortBy(savedState.sortBy);
-    setExpandedCustomers(new Set(savedState.expandedCustomers));
-    setInitialized(true);
-    
-    console.log('✅ State wiederhergestellt:', savedState);
-  }, []);
+  const [loading, setLoading] = useState(true);
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
 
   useEffect(() => {
     loadCustomers();
   }, []);
 
   useEffect(() => {
-    if (initialized) {
-      filterAndSortCustomers();
-    }
-  }, [searchQuery, customers, sortBy, initialized]);
-
-  // Speichere State bei jeder Änderung
-  useEffect(() => {
-    if (initialized) {
-      stateService.saveCustomersState({
-        sortBy,
-        searchQuery,
-        expandedCustomers: Array.from(expandedCustomers)
-      });
-    }
-  }, [sortBy, searchQuery, expandedCustomers, initialized]);
-
-  // Speichere Scroll-Position
-  useEffect(() => {
-    const handleScroll = () => {
-      if (contentRef.current) {
-        stateService.saveScrollPosition('customers', contentRef.current.scrollTop);
-      }
-    };
-
-    const element = contentRef.current;
-    if (element) {
-      element.addEventListener('scroll', handleScroll);
-      
-      // Restore scroll
-      if (initialized) {
-        stateService.restoreScrollPosition('customers', element);
-      }
-      
-      return () => element.removeEventListener('scroll', handleScroll);
-    }
-  }, [customers.length, initialized]);
+    filterCustomers();
+  }, [searchQuery, customers]);
 
   const loadCustomers = async () => {
-    const docs = await db.documents.toArray();
-    
-    const customerMap = new Map<string, CustomerData>();
-    
-    docs.forEach(doc => {
-      if (doc.customer) {
+    setLoading(true);
+    try {
+      const docs = await db.documents.toArray();
+      
+      const customerMap = new Map<string, CustomerData>();
+      
+      docs.forEach(doc => {
+        if (!doc.customer) return;
+        
         const existing = customerMap.get(doc.customer);
+        
         if (existing) {
-          existing.count++;
+          existing.documentCount++;
           existing.totalAmount += doc.amount || 0;
-          existing.documents.push(doc);
-          if (doc.date && (!existing.lastDate || doc.date > existing.lastDate)) {
-            existing.lastDate = doc.date;
+          
+          if (!existing.latestDocument || 
+              (doc.uploadDate > existing.latestDocument.uploadDate)) {
+            existing.latestDocument = doc;
           }
         } else {
           customerMap.set(doc.customer, {
             name: doc.customer,
-            count: 1,
+            documentCount: 1,
             totalAmount: doc.amount || 0,
-            lastDate: doc.date,
-            documents: [doc]
+            latestDocument: doc
           });
         }
-      }
-    });
-
-    const customerList = Array.from(customerMap.values());
-    setCustomers(customerList);
-    console.log(`✅ ${customerList.length} Kunden geladen`);
-  };
-
-  const filterAndSortCustomers = () => {
-    let filtered = customers;
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = customers.filter(c =>
-        c.name.toLowerCase().includes(query)
-      );
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'alphabet':
-          return a.name.localeCompare(b.name);
-        
-        case 'count':
-          return b.count - a.count;
-        
-        case 'recent':
-          if (!a.lastDate && !b.lastDate) return 0;
-          if (!a.lastDate) return 1;
-          if (!b.lastDate) return -1;
-          return b.lastDate.getTime() - a.lastDate.getTime();
-        
-        default:
-          return 0;
-      }
-    });
-
-    setFilteredCustomers(sorted);
-  };
-
-  const getSortLabel = (): string => {
-    switch (sortBy) {
-      case 'alphabet': return 'A-Z';
-      case 'count': return 'Anzahl';
-      case 'recent': return 'Neueste';
+      });
+      
+      const customerList = Array.from(customerMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      setCustomers(customerList);
+      
+    } catch (error) {
+      console.error('Fehler beim Laden der Kunden:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const cycleSortOption = () => {
-    const options: CustomerSortOption[] = ['alphabet', 'count', 'recent'];
-    const currentIndex = options.indexOf(sortBy);
-    const nextIndex = (currentIndex + 1) % options.length;
-    console.log(`🔄 Sortierung gewechselt: ${sortBy} → ${options[nextIndex]}`);
-    setSortBy(options[nextIndex]);
-  };
-
-  const toggleCustomer = (customerName: string) => {
-    const newExpanded = new Set(expandedCustomers);
-    if (newExpanded.has(customerName)) {
-      newExpanded.delete(customerName);
-      console.log(`📁 Kunde zugeklappt: ${customerName}`);
-    } else {
-      newExpanded.add(customerName);
-      console.log(`📂 Kunde aufgeklappt: ${customerName}`);
+  const filterCustomers = () => {
+    if (!searchQuery.trim()) {
+      setFilteredCustomers(customers);
+      return;
     }
-    setExpandedCustomers(newExpanded);
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = customers.filter(customer =>
+      customer.name.toLowerCase().includes(query)
+    );
+    
+    setFilteredCustomers(filtered);
   };
 
-  const isExpanded = (customerName: string): boolean => {
-    return expandedCustomers.has(customerName);
+  const handleCustomerClick = (customerName: string) => {
+    setSelectedCustomer(customerName);
   };
 
-  if (!initialized) {
+  const handleCloseCustomerView = () => {
+    setSelectedCustomer(null);
+    loadCustomers();
+  };
+
+  if (selectedCustomer) {
+    return (
+      <CustomerView
+        customerName={selectedCustomer}
+        onClose={handleCloseCustomerView}
+        setSwipeEnabled={setSwipeEnabled}
+      />
+    );
+  }
+
+  if (loading) {
     return (
       <div className="loading">
         <div className="spinner" />
@@ -193,7 +121,10 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1>👥 Kunden</h1>
+        <div className="header-title">
+          <h1>👥 Kunden</h1>
+          <span className="app-version">{APP_VERSION}</span>
+        </div>
       </div>
 
       <div className="search-bar">
@@ -207,86 +138,43 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
       </div>
 
       <div className="stats-bar">
-        <span>{filteredCustomers.length} Kunden</span>
-        <button 
-          onClick={cycleSortOption}
-          className="sort-button"
-          title="Sortierung ändern"
-        >
-          <ArrowUpDown size={16} />
-          <span>{getSortLabel()}</span>
-        </button>
+        <span>
+          {filteredCustomers.length === customers.length
+            ? `${customers.length} Kunden`
+            : `${filteredCustomers.length} von ${customers.length} Kunden`
+          }
+        </span>
       </div>
 
-      <div className="page-content" ref={contentRef}>
-        <div className="customers-list">
-          {filteredCustomers.length > 0 ? (
-            filteredCustomers.map(customer => {
-              const expanded = isExpanded(customer.name);
-              
-              return (
-                <div key={customer.name} className="customer-item">
-                  <div 
-                    className={`customer-card ${expanded ? 'expanded' : ''}`}
-                    onClick={() => toggleCustomer(customer.name)}
-                  >
-                    <div className="customer-info">
-                      <h3>{customer.name}</h3>
-                      <div className="customer-stats">
-                        <span>📄 {customer.count} Dokumente</span>
-                        <span>💰 {customer.totalAmount.toFixed(2)} EUR</span>
-                        {customer.lastDate && (
-                          <span>📅 {new Date(customer.lastDate).toLocaleDateString('de-DE')}</span>
-                        )}
-                      </div>
-                    </div>
-                    {expanded ? (
-                      <ChevronDown size={20} className="customer-arrow" />
-                    ) : (
-                      <ChevronRight size={20} className="customer-arrow" />
-                    )}
-                  </div>
-
-                  {expanded && (
-                    <div className="customer-documents">
-                      {customer.documents
-                        .sort((a, b) => 
-                          new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
-                        )
-                        .map(doc => (
-                          <div key={doc.id} className="document-item">
-                            <div className="document-thumbnail">
-                              <img 
-                                src={URL.createObjectURL(doc.blob)} 
-                                alt={doc.filename}
-                              />
-                            </div>
-                            <div className="document-details">
-                              <h4>{doc.filename}</h4>
-                              <div className="document-meta">
-                                {doc.amount && (
-                                  <span>💰 {doc.amount.toFixed(2)} EUR</span>
-                                )}
-                                {doc.date && (
-                                  <span>📅 {new Date(doc.date).toLocaleDateString('de-DE')}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
+      <div className="page-content">
+        {filteredCustomers.length > 0 ? (
+          <div className="customers-list">
+            {filteredCustomers.map((customer) => (
+              <div
+                key={customer.name}
+                className="customer-card"
+                onClick={() => handleCustomerClick(customer.name)}
+              >
+                <div className="customer-icon">
+                  <User size={32} />
                 </div>
-              );
-            })
-          ) : (
-            <div className="no-customers">
-              <p>
-                {searchQuery ? 'Keine Kunden gefunden' : 'Noch keine Kunden vorhanden'}
-              </p>
-            </div>
-          )}
-        </div>
+                <div className="customer-info">
+                  <h3>{customer.name}</h3>
+                  <div className="customer-stats">
+                    <span>📄 {customer.documentCount} Dokumente</span>
+                    <span>💰 {customer.totalAmount.toFixed(2)} EUR</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="no-customers">
+            <p>
+              {searchQuery ? 'Keine Kunden gefunden' : 'Noch keine Kunden'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
