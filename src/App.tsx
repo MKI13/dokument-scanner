@@ -1,22 +1,18 @@
-import { useState, useEffect } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from './db/database';
+import { useState } from 'react';
 import Header from './components/Header';
-import DocumentUpload from './components/DocumentUpload';
-import DocumentList from './components/DocumentList';
-import CustomerView from './components/CustomerView';
-import MonthView from './components/MonthView';
-import CalendarView from './components/CalendarView';
-import DuplicateView from './components/DuplicateView';
-import BackupManager from './components/BackupManager';
+import UploadPage from './pages/UploadPage';
+import DocumentsPage from './pages/DocumentsPage';
+import CustomersPage from './pages/CustomersPage';
+import MonthPage from './pages/MonthPage';
+import CalendarPage from './pages/CalendarPage';
+import DuplicatesPage from './pages/DuplicatesPage';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates'>('upload');
   const [deleteMode, setDeleteMode] = useState(false);
 
-  const documents = useLiveQuery(() => db.documents.toArray()) || [];
-
   const handleDeleteAll = async () => {
+    const { db } = await import('./db/database');
     await db.documents.clear();
     setDeleteMode(false);
   };
@@ -36,17 +32,12 @@ export default function App() {
       />
       
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {activeView === 'upload' && (
-          <div className="space-y-6">
-            <DocumentUpload />
-            <BackupManager />
-          </div>
-        )}
-        {activeView === 'documents' && <DocumentList deleteMode={deleteMode} />}
-        {activeView === 'customers' && <CustomerView />}
-        {activeView === 'month' && <MonthView />}
-        {activeView === 'calendar' && <CalendarView />}
-        {activeView === 'duplicates' && <DuplicateView />}
+        {activeView === 'upload' && <UploadPage />}
+        {activeView === 'documents' && <DocumentsPage deleteMode={deleteMode} />}
+        {activeView === 'customers' && <CustomersPage />}
+        {activeView === 'month' && <MonthPage />}
+        {activeView === 'calendar' && <CalendarPage />}
+        {activeView === 'duplicates' && <DuplicatesPage />}
       </main>
     </div>
   );
