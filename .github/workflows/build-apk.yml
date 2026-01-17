@@ -1,8 +1,6 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -19,11 +17,34 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Debug - Show files
+        run: |
+          echo "=== Files in repo ==="
+          ls -la
+          echo ""
+          echo "=== package.json ==="
+          cat package.json
+
       - name: Install dependencies
-        run: npm ci
+        run: |
+          echo "Installing dependencies..."
+          npm ci
+
+      - name: Debug - Check dist before build
+        run: |
+          echo "=== Before build ==="
+          ls -la
 
       - name: Build web app
-        run: npm run build
+        run: |
+          echo "Building web app..."
+          npm run build
+          echo ""
+          echo "=== After build ==="
+          ls -la
+          echo ""
+          echo "=== dist folder ==="
+          ls -la dist/
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -31,26 +52,76 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Capacitor
         run: |
+          echo "Installing Capacitor..."
           npm install @capacitor/core @capacitor/cli @capacitor/android
+          echo ""
+          echo "=== Capacitor installed ==="
+          npx cap --version
 
       - name: Initialize Capacitor
         run: |
+          echo "Initializing Capacitor..."
           npx cap init "Dokument Scanner" "com.efsin.dokscanner" --web-dir=dist
+          echo ""
+          echo "=== capacitor.config created ==="
+          cat capacitor.config.ts
 
       - name: Add Android platform
-        run: npx cap add android
+        run: |
+          echo "Adding Android platform..."
+          npx cap add android
+          echo ""
+          echo "=== Android folder created ==="
+          ls -la android/
 
       - name: Sync Capacitor
-        run: npx cap sync
+        run: |
+          echo "Syncing Capacitor..."
+          npx cap sync
+          echo "=== Sync complete ==="
 
-      - name: Build APK
-        working-directory: android
-        run: ./gradlew assembleRelease
+      - name: Make gradlew executable
+        run: |
+          echo "Making gradlew executable..."
+          cd android
+          chmod +x gradlew
+          ls -la gradlew
 
-      - name: Upload APK
+      - name: Build APK (Debug mode first)
+        run: |
+          cd android
+          echo "Building debug APK first..."
+          ./gradlew assembleDebug --stacktrace --info
+          echo ""
+          echo "=== Debug APK built ==="
+          find . -name "*.apk"
+
+      - name: Build APK (Release mode)
+        run: |
+          cd android
+          echo "Building release APK..."
+          ./gradlew assembleRelease --stacktrace --info
+          echo ""
+          echo "=== Release APK built ==="
+          find . -name "*.apk"
+
+      - name: Upload Debug APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dokument-scanner-apk
+          name: dokument-scanner-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+
+      - name: Upload Release APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dokument-scanner-release-apk
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: warn
