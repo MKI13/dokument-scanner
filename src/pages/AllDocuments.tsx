@@ -16,8 +16,6 @@ interface AllDocumentsProps {
 
 type SortOption = 'alphabet' | 'date' | 'upload';
 
-const APP_VERSION = 'v1.5.6';
-
 export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, refreshTrigger }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   
@@ -79,29 +77,20 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
       const query = searchQuery.toLowerCase();
       
       filtered = documents.filter(doc => {
-        // Suche nach Dateiname
         if (doc.filename.toLowerCase().includes(query)) return true;
-        
-        // Suche nach Kunde
         if (doc.customer?.toLowerCase().includes(query)) return true;
         
-        // Suche nach Betrag (z.B. "77.43" oder "77,43" oder "77")
         if (doc.amount) {
           const amountStr = doc.amount.toString();
           const amountComma = doc.amount.toFixed(2).replace('.', ',');
           if (amountStr.includes(query) || amountComma.includes(query)) return true;
         }
         
-        // Suche nach Datum (verschiedene Formate)
         if (doc.date) {
           const dateObj = new Date(doc.date);
-          // ISO Format: 2024-07-15
           const isoDate = dateObj.toISOString().split('T')[0];
-          // DE Format: 15.07.2024
           const deDate = dateObj.toLocaleDateString('de-DE');
-          // Jahr: 2024
           const year = dateObj.getFullYear().toString();
-          // Monat: 07 oder 7
           const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
           
           if (isoDate.includes(query) || 
@@ -338,6 +327,7 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
 
   return (
     <div className="page-container">
+      <div className="page-controls">
         <div className="header-actions">
           <button 
             onClick={loadDocuments} 
