@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import Header from './components/Header';
-import Upload from './pages/Upload';
-import AllDocuments from './pages/AllDocuments';
-import Customers from './pages/Customers';
-import MonthView from './pages/MonthView';
-import Calendar from './pages/Calendar';
-import Duplicates from './pages/Duplicates';
+import { Upload } from './pages/Upload';
+import { AllDocuments } from './pages/AllDocuments';
+import { Customers } from './pages/Customers';
+import { MonthView } from './pages/MonthView';
+import { Calendar } from './pages/Calendar';
+import { Duplicates } from './pages/Duplicates';
 import './App.css';
 
 export default function App() {
