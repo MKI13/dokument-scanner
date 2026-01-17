@@ -338,11 +338,6 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="header-title">
-          <h1>📚 Alle Dokumente</h1>
-          <span className="app-version">{APP_VERSION}</span>
-        </div>
         <div className="header-actions">
           <button 
             onClick={loadDocuments} 
