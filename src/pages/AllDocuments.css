@@ -296,3 +296,21 @@
     gap: 12px;
   }
 }
+
+/* ============================================
+   MOBILE FIX - BUTTONS NEBENEINANDER
+   ============================================ */
+
+@media (max-width: 768px) {
+  .header-actions {
+    display: flex;
+    flex-direction: row !important;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .icon-button {
+    flex: 0 0 auto;
+    min-width: auto;
+  }
+}
