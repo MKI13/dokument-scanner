@@ -12,7 +12,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   background: #0f172a;
   color: #f1f5f9;
-  overflow: hidden;
 }
 
 .app {
@@ -23,7 +22,7 @@ body {
 }
 
 /* ============================================
-   APP HEADER - TITEL + VERSION
+   APP HEADER
    ============================================ */
 
 .app-header {
@@ -56,71 +55,90 @@ body {
 }
 
 /* ============================================
-   TOP NAVIGATION - 6 BUTTONS
+   TOP NAVIGATION
    ============================================ */
 
 .top-navigation {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  padding: 10px 12px;
-  background: #1e293b;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding: 12px;
+  background: #0f172a;
   border-bottom: 2px solid #334155;
   flex-shrink: 0;
 }
 
 .top-navigation button {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #334155;
+  border-radius: 12px;
+  padding: 12px 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 8px;
-  background: #0f172a;
-  border: 2px solid #334155;
-  border-radius: 8px;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 12px;
-  font-weight: 600;
-  min-height: 68px;
+  transition: all 0.2s ease;
+  min-height: 70px;
 }
 
 .top-navigation button:hover {
-  background: #334155;
-  color: #cbd5e1;
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
   border-color: #475569;
+  transform: translateY(-2px);
+  color: #cbd5e1;
 }
 
 .top-navigation button.active {
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-  color: white;
   border-color: #0ea5e9;
+  color: white;
   box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
 }
 
-.top-navigation button svg {
-  flex-shrink: 0;
-}
-
-.top-navigation button span {
-  font-size: 11px;
-  white-space: nowrap;
+.top-navigation button.delete-mode {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  border-color: #dc2626;
+  color: white;
 }
 
 /* ============================================
-   APP MAIN - CONTENT AREA
+   MAIN CONTENT - SMOOTH SCROLL
    ============================================ */
 
-.app-main {
+main {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #0f172a;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar Styling */
+main::-webkit-scrollbar {
+  width: 8px;
+}
+
+main::-webkit-scrollbar-track {
   background: #0f172a;
 }
 
+main::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+main::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
 /* ============================================
-   RESPONSIVE
+   MOBILE
    ============================================ */
 
 @media (max-width: 768px) {
@@ -149,46 +167,11 @@ body {
   }
 
   .top-navigation button svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .top-navigation button span {
-    font-size: 10px;
-  }
-}
-
-@media (max-width: 480px) {
-  .app-header h1 {
-    font-size: 16px;
-  }
-
-  .app-version {
-    font-size: 9px;
-    padding: 3px 7px;
-  }
-
-  .top-navigation {
-    padding: 6px;
-    gap: 3px;
-  }
-
-  .top-navigation button {
-    padding: 6px 3px;
-    min-height: 52px;
+    width: 16px;
+    height: 16px;
   }
 
   .top-navigation button span {
     font-size: 9px;
-  }
-}
-
-@media (max-width: 380px) {
-  .top-navigation button span {
-    display: none;
-  }
-
-  .top-navigation button {
-    min-height: 46px;
   }
 }
