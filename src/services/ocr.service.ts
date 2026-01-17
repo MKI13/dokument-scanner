@@ -9,18 +9,19 @@ export interface OCRResult {
 }
 
 class OCRService {
-  
+
   async processImage(
     file: File,
     onProgress?: (progress: number) => void
   ): Promise<OCRResult> {
-    
+
     console.log('🔍 STARTE OCR FÜR:', file.name);
-    
+
     try {
-      // Tesseract Worker erstellen
-      const worker = await Tesseract.createWorker('deu', 1, {
-        logger: (m) => {
+      // Tesseract Worker erstellen (NEUE SYNTAX)
+      const worker = await Tesseract.createWorker({
+        lang: 'deu',
+        logger: (m: any) => {
           if (m.status === 'recognizing text') {
             const progress = Math.round(m.progress * 100);
             console.log(`OCR Progress: ${progress}%`);
@@ -29,13 +30,17 @@ class OCRService {
         }
       });
 
+      console.log('✅ Worker erstellt');
+
       // OCR durchführen
       const { data } = await worker.recognize(file);
-      await worker.terminate();
-
+      
       console.log('✅ OCR ABGESCHLOSSEN');
-      console.log('📄 Text:', data.text.substring(0, 200) + '...');
+      console.log('📄 Text:', data.text.substring(0, 300));
       console.log('🎯 Confidence:', data.confidence);
+
+      // Worker beenden
+      await worker.terminate();
 
       // Text extrahieren und parsen
       const result: OCRResult = {
@@ -52,7 +57,7 @@ class OCRService {
 
     } catch (error) {
       console.error('❌ OCR FEHLER:', error);
-      
+
       // Fallback: Keine OCR-Daten
       return {
         text: '',
@@ -65,10 +70,42 @@ class OCRService {
   }
 
   private extractCustomer(text: string): string | null {
-    // Suche nach typischen Kundennamen-Patterns
+    console.log('🔍 Suche Kunde in:', text.substring(0, 200));
+
+    // 1. PRIORITÄT: Website Pattern (www.FIRMA.de → FIRMA)
+    const websitePattern = /(?:www\s*\.\s*|https?:\/\/)([\w-]+)\s*\.\s*(de|com|net|org|eu|at|ch|fr|gr)/gi;
+    const websiteMatches = Array.from(text.matchAll(websitePattern));
+    
+    for (const match of websiteMatches) {
+      const domain = match[1].toLowerCase();
+      
+      // Filter generische Domains
+      if (!['gmail', 'yahoo', 'web', 'mail', 'info', 'email'].includes(domain)) {
+        // Capitalize first letter
+        const customer = domain.charAt(0).toUpperCase() + domain.slice(1);
+        console.log('✅ Kunde von Website:', customer);
+        return customer;
+      }
+    }
+
+    // 2. Email Pattern (firma@domain.de → Firma)
+    const emailPattern = /[\w.-]+@([\w-]+)\.(de|com|net|org)/gi;
+    const emailMatches = Array.from(text.matchAll(emailPattern));
+    
+    for (const match of emailMatches) {
+      const domain = match[1].toLowerCase();
+      
+      if (!['gmail', 'yahoo', 'web', 'mail', 'info'].includes(domain)) {
+        const customer = domain.charAt(0).toUpperCase() + domain.slice(1);
+        console.log('✅ Kunde von Email:', customer);
+        return customer;
+      }
+    }
+
+    // 3. Firmenname Pattern
     const patterns = [
-      /(?:Kunde|Customer|Name|Firma|Company)[:\s]+([A-ZÄÖÜ][a-zäöüß\s]+(?:[A-ZÄÖÜ][a-zäöüß]+)?)/i,
-      /^([A-ZÄÖÜ][a-zäöüß]+\s+[A-ZÄÖÜ][a-zäöüß]+)/m,
+      /(?:Firma|Company|Kunde|Customer)[:\s]+([A-ZÄÖÜ][a-zäöüß\s]+(?:[A-ZÄÖÜ][a-zäöüß]+)?)/i,
+      /^([A-ZÄÖÜ][a-zäöüß]+\s+(?:GmbH|AG|UG|KG|OHG))/m,
       /Rechnung\s+(?:an|für)[:\s]+([A-ZÄÖÜ][a-zäöüß\s]+)/i
     ];
 
@@ -77,16 +114,19 @@ class OCRService {
       if (match && match[1]) {
         const customer = match[1].trim();
         if (customer.length > 2 && customer.length < 50) {
-          console.log('👤 Kunde gefunden:', customer);
+          console.log('✅ Kunde gefunden:', customer);
           return customer;
         }
       }
     }
 
+    console.log('❌ Kein Kunde gefunden');
     return null;
   }
 
   private extractAmount(text: string): number | null {
+    console.log('💰 Suche Betrag...');
+
     // Suche nach Geldbeträgen
     const patterns = [
       /(?:Summe|Total|Betrag|Gesamt|Amount)[:\s]*€?\s*([\d.,]+)\s*€?/i,
@@ -114,14 +154,17 @@ class OCRService {
     if (amounts.length > 0) {
       // Nimm den größten Betrag (meist der Gesamtbetrag)
       const maxAmount = Math.max(...amounts);
-      console.log('💰 Betrag gefunden:', maxAmount, '€');
+      console.log('✅ Betrag gefunden:', maxAmount, '€');
       return maxAmount;
     }
 
+    console.log('❌ Kein Betrag gefunden');
     return null;
   }
 
   private extractDate(text: string): Date | null {
+    console.log('📅 Suche Datum...');
+
     // Deutsche Datumsformate
     const patterns = [
       /(\d{1,2})\.(\d{1,2})\.(\d{4})/,  // DD.MM.YYYY
@@ -134,7 +177,7 @@ class OCRService {
       const match = text.match(pattern);
       if (match) {
         let day, month, year;
-        
+
         if (pattern.toString().includes('YYYY-MM-DD')) {
           [, year, month, day] = match;
         } else {
@@ -142,16 +185,17 @@ class OCRService {
         }
 
         year = year.length === 2 ? '20' + year : year;
-        
+
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        
+
         if (!isNaN(date.getTime())) {
-          console.log('📅 Datum gefunden:', date.toLocaleDateString('de-DE'));
+          console.log('✅ Datum gefunden:', date.toLocaleDateString('de-DE'));
           return date;
         }
       }
     }
 
+    console.log('❌ Kein Datum gefunden');
     return null;
   }
 }
