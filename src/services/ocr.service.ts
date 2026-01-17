@@ -1,4 +1,4 @@
-import Tesseract from 'tesseract.js';
+import * as Tesseract from 'tesseract.js';
 
 export interface OCRResult {
   text: string;
@@ -18,9 +18,8 @@ class OCRService {
     console.log('🔍 STARTE OCR FÜR:', file.name);
 
     try {
-      // Tesseract Worker erstellen (NEUE SYNTAX)
-      const worker = await Tesseract.createWorker({
-        lang: 'deu',
+      // Tesseract Worker erstellen
+      const worker = await Tesseract.createWorker('deu', 1, {
         logger: (m: any) => {
           if (m.status === 'recognizing text') {
             const progress = Math.round(m.progress * 100);
@@ -58,7 +57,6 @@ class OCRService {
     } catch (error) {
       console.error('❌ OCR FEHLER:', error);
 
-      // Fallback: Keine OCR-Daten
       return {
         text: '',
         confidence: 0,
@@ -72,23 +70,21 @@ class OCRService {
   private extractCustomer(text: string): string | null {
     console.log('🔍 Suche Kunde in:', text.substring(0, 200));
 
-    // 1. PRIORITÄT: Website Pattern (www.FIRMA.de → FIRMA)
+    // Website Pattern (www.FIRMA.de → FIRMA)
     const websitePattern = /(?:www\s*\.\s*|https?:\/\/)([\w-]+)\s*\.\s*(de|com|net|org|eu|at|ch|fr|gr)/gi;
     const websiteMatches = Array.from(text.matchAll(websitePattern));
     
     for (const match of websiteMatches) {
       const domain = match[1].toLowerCase();
       
-      // Filter generische Domains
       if (!['gmail', 'yahoo', 'web', 'mail', 'info', 'email'].includes(domain)) {
-        // Capitalize first letter
         const customer = domain.charAt(0).toUpperCase() + domain.slice(1);
         console.log('✅ Kunde von Website:', customer);
         return customer;
       }
     }
 
-    // 2. Email Pattern (firma@domain.de → Firma)
+    // Email Pattern
     const emailPattern = /[\w.-]+@([\w-]+)\.(de|com|net|org)/gi;
     const emailMatches = Array.from(text.matchAll(emailPattern));
     
@@ -102,7 +98,7 @@ class OCRService {
       }
     }
 
-    // 3. Firmenname Pattern
+    // Firmenname Pattern
     const patterns = [
       /(?:Firma|Company|Kunde|Customer)[:\s]+([A-ZÄÖÜ][a-zäöüß\s]+(?:[A-ZÄÖÜ][a-zäöüß]+)?)/i,
       /^([A-ZÄÖÜ][a-zäöüß]+\s+(?:GmbH|AG|UG|KG|OHG))/m,
@@ -125,9 +121,6 @@ class OCRService {
   }
 
   private extractAmount(text: string): number | null {
-    console.log('💰 Suche Betrag...');
-
-    // Suche nach Geldbeträgen
     const patterns = [
       /(?:Summe|Total|Betrag|Gesamt|Amount)[:\s]*€?\s*([\d.,]+)\s*€?/i,
       /€\s*([\d.,]+)/,
@@ -152,24 +145,19 @@ class OCRService {
     }
 
     if (amounts.length > 0) {
-      // Nimm den größten Betrag (meist der Gesamtbetrag)
       const maxAmount = Math.max(...amounts);
       console.log('✅ Betrag gefunden:', maxAmount, '€');
       return maxAmount;
     }
 
-    console.log('❌ Kein Betrag gefunden');
     return null;
   }
 
   private extractDate(text: string): Date | null {
-    console.log('📅 Suche Datum...');
-
-    // Deutsche Datumsformate
     const patterns = [
-      /(\d{1,2})\.(\d{1,2})\.(\d{4})/,  // DD.MM.YYYY
-      /(\d{1,2})\.(\d{1,2})\.(\d{2})/,  // DD.MM.YY
-      /(\d{4})-(\d{2})-(\d{2})/,        // YYYY-MM-DD
+      /(\d{1,2})\.(\d{1,2})\.(\d{4})/,
+      /(\d{1,2})\.(\d{1,2})\.(\d{2})/,
+      /(\d{4})-(\d{2})-(\d{2})/,
       /(?:Datum|Date)[:\s]+(\d{1,2})\.(\d{1,2})\.(\d{4})/i
     ];
 
@@ -195,7 +183,6 @@ class OCRService {
       }
     }
 
-    console.log('❌ Kein Datum gefunden');
     return null;
   }
 }
