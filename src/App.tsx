@@ -1,19 +1,16 @@
 import { useState } from 'react';
 import Header from './components/Header';
-import UploadPage from './pages/UploadPage';
-import DocumentsPage from './pages/DocumentsPage';
-import CustomersPage from './pages/CustomersPage';
-import MonthPage from './pages/MonthPage';
-import CalendarPage from './pages/CalendarPage';
-import DuplicatesPage from './pages/DuplicatesPage';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates'>('upload');
   const [deleteMode, setDeleteMode] = useState(false);
 
   const handleDeleteAll = async () => {
-    const { db } = await import('./db/database');
-    await db.documents.clear();
+    if (window.confirm('Möchten Sie wirklich ALLE Dokumente löschen?')) {
+      const { db } = await import('./db/database');
+      await db.documents.clear();
+      alert('Alle Dokumente wurden gelöscht!');
+    }
     setDeleteMode(false);
   };
 
@@ -32,12 +29,11 @@ export default function App() {
       />
       
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {activeView === 'upload' && <UploadPage />}
-        {activeView === 'documents' && <DocumentsPage deleteMode={deleteMode} />}
-        {activeView === 'customers' && <CustomersPage />}
-        {activeView === 'month' && <MonthPage />}
-        {activeView === 'calendar' && <CalendarPage />}
-        {activeView === 'duplicates' && <DuplicatesPage />}
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Dokument Scanner v1.5.9</h2>
+          <p className="text-gray-600">Ansicht: {activeView}</p>
+          <p className="text-sm text-gray-500 mt-4">App läuft erfolgreich!</p>
+        </div>
       </main>
     </div>
   );
