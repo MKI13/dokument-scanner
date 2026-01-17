@@ -8,6 +8,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
+    minify: 'terser',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -17,5 +18,9 @@ export default defineConfig({
         }
       }
     }
+  },
+  server: {
+    host: '0.0.0.0',
+    port: 9001
   }
 })
