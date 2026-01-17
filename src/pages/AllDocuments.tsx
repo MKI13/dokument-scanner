@@ -16,7 +16,7 @@ interface AllDocumentsProps {
 
 type SortOption = 'alphabet' | 'date' | 'upload';
 
-const APP_VERSION = 'v1.5.2';
+const APP_VERSION = 'v1.5.6';
 
 export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, refreshTrigger }) => {
   const contentRef = useRef<HTMLDivElement>(null);

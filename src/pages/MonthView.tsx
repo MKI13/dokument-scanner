@@ -4,7 +4,7 @@ import { Document } from '../types/document';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './MonthView.css';
 
-const APP_VERSION = 'v1.5.3';
+const APP_VERSION = 'v1.5.6';
 
 interface MonthViewProps {
   setSwipeEnabled: (enabled: boolean) => void;

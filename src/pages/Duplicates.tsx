@@ -5,7 +5,7 @@ import { Document } from '../types/document';
 import { Trash2, Eye } from 'lucide-react';
 import './Duplicates.css';
 
-const APP_VERSION = 'v1.5.3';
+const APP_VERSION = 'v1.5.6';
 
 interface DuplicatesProps {
   setSwipeEnabled: (enabled: boolean) => void;

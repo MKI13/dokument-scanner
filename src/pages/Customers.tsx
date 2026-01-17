@@ -6,7 +6,7 @@ import { Document } from '../types/document';
 import { User, Search } from 'lucide-react';
 import './Customers.css';
 
-const APP_VERSION = 'v1.5.3';
+const APP_VERSION = 'v1.5.6';
 
 interface CustomersProps {
   setSwipeEnabled: (enabled: boolean) => void;
