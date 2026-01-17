@@ -1,9 +1,10 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.efsin.dokscanner',
-  appName: 'Dokument Scanner',
-  webDir: 'dist'
+  appName: 'DokumentScanner',
+  webDir: 'dist',
+  bundledWebRuntime: false
 };
 
 export default config;
