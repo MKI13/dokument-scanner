@@ -1,16 +1,18 @@
 /* ============================================
-   KALENDER-SEITE
+   KALENDER - MAIN STYLES
    ============================================ */
 
 .page-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background: #0f172a;
-  overflow: hidden;
 }
 
 .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 20px;
   background: #1e293b;
   border-bottom: 2px solid #334155;
@@ -23,11 +25,7 @@
   color: #f1f5f9;
 }
 
-/* ============================================
-   KALENDER CONTROLS
-   ============================================ */
-
-.calendar-controls {
+.calendar-navigation {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -37,18 +35,18 @@
   flex-shrink: 0;
 }
 
-.calendar-controls h2 {
+.calendar-navigation h2 {
   margin: 0;
   font-size: 20px;
   color: #f1f5f9;
-  font-weight: 600;
+  text-transform: capitalize;
 }
 
-.month-nav-button {
+.calendar-navigation button {
   background: #334155;
   border: 2px solid #475569;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px;
   cursor: pointer;
   color: #cbd5e1;
   display: flex;
@@ -57,294 +55,138 @@
   transition: all 0.2s;
 }
 
-.month-nav-button:hover {
+.calendar-navigation button:hover {
   background: #475569;
   border-color: #0ea5e9;
   color: #0ea5e9;
 }
 
-.month-nav-button:active {
-  transform: scale(0.95);
-}
-
-/* ============================================
-   PAGE CONTENT
-   ============================================ */
-
-.page-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  background: #0f172a;
-}
-
-/* ============================================
-   KALENDER GRID
-   ============================================ */
-
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  margin-bottom: 24px;
-  width: 100%;
-  max-width: 100%;
+  gap: 4px;
+  padding: 20px;
+  background: #1e293b;
 }
 
-.calendar-weekday {
-  background: #1e293b;
-  border: 2px solid #334155;
-  border-radius: 8px;
-  padding: 12px 8px;
+.weekday-header {
   text-align: center;
-  font-weight: 600;
+  padding: 12px;
   font-size: 14px;
+  font-weight: 700;
   color: #94a3b8;
+  background: #0f172a;
+  border-radius: 8px;
 }
 
 .calendar-day {
-  background: #1e293b;
+  aspect-ratio: 1;
+  background: #0f172a;
   border: 2px solid #334155;
-  border-radius: 12px;
-  padding: 12px 8px;
-  min-height: 80px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.calendar-day.empty {
-  background: transparent;
-  border: none;
+.calendar-day:hover {
+  border-color: #475569;
+  background: #1e293b;
+}
+
+.calendar-day.other-month {
+  opacity: 0.3;
+}
+
+.calendar-day.today {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.1);
 }
 
 .calendar-day.has-documents {
-  border-color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.05);
-  cursor: pointer;
-}
-
-.calendar-day.has-documents:hover {
-  background: rgba(14, 165, 233, 0.1);
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
 }
 
 .day-number {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #f1f5f9;
-  text-align: center;
-}
-
-.day-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  color: #94a3b8;
-  text-align: center;
-  margin-top: auto;
 }
 
 .doc-count {
-  color: #0ea5e9;
-  font-weight: 600;
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: #0ea5e9;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.doc-amount {
-  color: #10b981;
-  font-weight: 600;
-}
-
-/* ============================================
-   MONATSÜBERSICHT
-   ============================================ */
-
-.month-summary {
-  background: #1e293b;
-  border: 2px solid #334155;
-  border-radius: 12px;
+.selected-date-docs {
   padding: 20px;
-  margin-top: 24px;
+  background: #1e293b;
+  border-top: 2px solid #334155;
 }
 
-.month-summary h3 {
+.selected-date-docs h3 {
   margin: 0 0 16px 0;
   font-size: 18px;
   color: #f1f5f9;
 }
 
-.summary-stats {
+.documents-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.summary-item {
+.doc-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 12px;
   padding: 12px;
   background: #0f172a;
+  border: 2px solid #334155;
   border-radius: 8px;
 }
 
-.summary-label {
-  color: #94a3b8;
+.doc-item img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.doc-item div {
+  flex: 1;
+}
+
+.doc-item p {
+  margin: 4px 0;
   font-size: 14px;
+  color: #cbd5e1;
 }
-
-.summary-value {
-  color: #f1f5f9;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-/* ============================================
-   RESPONSIVE - MOBILE
-   ============================================ */
 
 @media (max-width: 768px) {
-  .page-header {
-    padding: 16px;
-  }
-
-  .page-header h1 {
-    font-size: 20px;
-  }
-
-  .calendar-controls {
-    padding: 12px 16px;
-  }
-
-  .calendar-controls h2 {
-    font-size: 18px;
-  }
-
-  .month-nav-button {
-    padding: 6px 10px;
-  }
-
-  .page-content {
+  .calendar-grid {
     padding: 12px;
-  }
-
-  .calendar-grid {
-    gap: 6px;
-  }
-
-  .calendar-weekday {
-    padding: 8px 4px;
-    font-size: 12px;
-  }
-
-  .calendar-day {
-    padding: 8px 4px;
-    min-height: 70px;
-  }
-
-  .day-number {
-    font-size: 16px;
-  }
-
-  .day-info {
-    font-size: 10px;
-  }
-
-  .month-summary {
-    padding: 16px;
-  }
-
-  .month-summary h3 {
-    font-size: 16px;
-  }
-
-  .summary-item {
-    padding: 10px;
-  }
-
-  .summary-label {
-    font-size: 13px;
-  }
-
-  .summary-value {
-    font-size: 14px;
-  }
-}
-
-/* ============================================
-   RESPONSIVE - SEHR KLEINE DISPLAYS
-   ============================================ */
-
-@media (max-width: 480px) {
-  .page-content {
-    padding: 8px;
-  }
-
-  .calendar-grid {
-    gap: 4px;
-  }
-
-  .calendar-weekday {
-    padding: 6px 2px;
-    font-size: 11px;
-  }
-
-  .calendar-day {
-    padding: 6px 2px;
-    min-height: 60px;
-    border-radius: 8px;
-  }
-
-  .day-number {
-    font-size: 14px;
-  }
-
-  .day-info {
-    font-size: 9px;
     gap: 2px;
   }
 
-  .month-summary {
-    padding: 12px;
+  .weekday-header {
+    padding: 8px;
+    font-size: 12px;
   }
 
-  .summary-stats {
-    gap: 8px;
+  .day-number {
+    font-size: 14px;
   }
-}
-
-/* ============================================
-   LOADING SPINNER
-   ============================================ */
-
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background: #0f172a;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #334155;
-  border-top-color: #0ea5e9;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading p {
-  margin-top: 16px;
-  color: #94a3b8;
-  font-size: 16px;
 }
