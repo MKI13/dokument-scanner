@@ -6,8 +6,6 @@ import { Document } from '../types/document';
 import { User, Search } from 'lucide-react';
 import './Customers.css';
 
-const APP_VERSION = 'v1.5.6';
-
 interface CustomersProps {
   setSwipeEnabled: (enabled: boolean) => void;
 }
@@ -120,13 +118,6 @@ export const Customers: React.FC<CustomersProps> = ({ setSwipeEnabled }) => {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="header-title">
-          <h1>👥 Kunden</h1>
-          <span className="app-version">{APP_VERSION}</span>
-        </div>
-      </div>
-
       <div className="search-bar">
         <Search size={20} />
         <input

@@ -4,8 +4,6 @@ import { Document } from '../types/document';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Calendar.css';
 
-const APP_VERSION = 'v1.5.6';
-
 interface CalendarProps {
   setSwipeEnabled: (enabled: boolean) => void;
 }
@@ -77,13 +75,6 @@ export const Calendar: React.FC<CalendarProps> = ({ setSwipeEnabled }) => {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="header-title">
-          <h1>📆 Kalender</h1>
-          <span className="app-version">{APP_VERSION}</span>
-        </div>
-      </div>
-
       <div className="calendar-navigation">
         <button onClick={previousMonth}>
           <ChevronLeft size={24} />

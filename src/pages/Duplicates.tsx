@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/database.service';
 import { modalService } from '../services/modal.service';
 import { Document } from '../types/document';
-import { Trash2, Eye } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import './Duplicates.css';
-
-const APP_VERSION = 'v1.5.6';
 
 interface DuplicatesProps {
   setSwipeEnabled: (enabled: boolean) => void;
@@ -91,13 +89,6 @@ export const Duplicates: React.FC<DuplicatesProps> = ({ setSwipeEnabled }) => {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="header-title">
-          <h1>🔍 Duplikate</h1>
-          <span className="app-version">{APP_VERSION}</span>
-        </div>
-      </div>
-
       <div className="stats-bar">
         <span>
           {duplicates.length > 0
