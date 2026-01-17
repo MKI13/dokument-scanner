@@ -1,12 +1,13 @@
 export interface Document {
   id?: number;
   filename: string;
+  originalFilename: string;
   blob: Blob;
   uploadDate: Date;
-  documentDate: Date;
-  customer: string | null;
-  amount: number | null;
-  extractedText: string | null;
-  ocrConfidence: number | null;
-  fileHash: string;
+  customer?: string;
+  amount?: number;
+  invoiceNumber?: string;
+  date?: Date;
+  ocrText?: string;
+  tags?: string[];
 }
