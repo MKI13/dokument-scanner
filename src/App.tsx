@@ -7,11 +7,13 @@ import { MonthView } from './pages/MonthView';
 import { Calendar } from './pages/Calendar';
 import { Duplicates } from './pages/Duplicates';
 import { Modal } from './components/Modal/Modal';
+import { useDuplicateCount } from './hooks/useDuplicateCount';
 import './App.css';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates'>('upload');
   const [deleteMode, setDeleteMode] = useState(false);
+  const duplicateCount = useDuplicateCount();
 
   const handleDeleteAll = async () => {
     if (window.confirm('Möchten Sie wirklich ALLE Dokumente löschen?')) {
@@ -34,6 +36,7 @@ export default function App() {
         onDeleteAll={handleDeleteAll}
         deleteMode={deleteMode}
         onToggleDeleteMode={handleToggleDeleteMode}
+        duplicateCount={duplicateCount}
       />
 
       <main className="max-w-7xl mx-auto px-4 py-6">

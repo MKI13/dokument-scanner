@@ -6,9 +6,10 @@ interface HeaderProps {
   onDeleteAll: () => void;
   deleteMode: boolean;
   onToggleDeleteMode: () => void;
+  duplicateCount: number;
 }
 
-export default function Header({ activeView, onViewChange, onDeleteAll, deleteMode, onToggleDeleteMode }: HeaderProps) {
+export default function Header({ activeView, onViewChange, onDeleteAll, deleteMode, onToggleDeleteMode, duplicateCount }: HeaderProps) {
   const handleDeleteClick = () => {
     if (deleteMode) {
       if (confirm('Möchten Sie wirklich ALLE Dokumente löschen?')) {
@@ -68,10 +69,13 @@ export default function Header({ activeView, onViewChange, onDeleteAll, deleteMo
 
         <button
           onClick={() => onViewChange('duplicates')}
-          className={activeView === 'duplicates' ? 'active' : ''}
+          className={`${activeView === 'duplicates' ? 'active' : ''} ${duplicateCount > 0 ? 'has-duplicates' : ''} ${duplicateCount >= 5 ? 'critical-duplicates' : ''}`}
         >
           <Copy size={20} />
           <span>Duplikate</span>
+          {duplicateCount > 0 && (
+            <span className="duplicate-badge">{duplicateCount}</span>
+          )}
         </button>
 
         <button

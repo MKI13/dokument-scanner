@@ -106,6 +106,62 @@ body {
   color: white;
 }
 
+/* Duplikate Warnung - Gelb */
+.top-navigation button.has-duplicates {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: #f59e0b;
+  color: white;
+  animation: pulse-warning 2s ease-in-out infinite;
+}
+
+/* Duplikate Kritisch - Rot (5+) */
+.top-navigation button.critical-duplicates {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-color: #ef4444;
+  color: white;
+  animation: pulse-critical 2s ease-in-out infinite;
+}
+
+/* Duplikate Badge */
+.duplicate-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #dc2626;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  border: 2px solid #0f172a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.top-navigation button {
+  position: relative;
+}
+
+/* Pulse Animationen */
+@keyframes pulse-warning {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+}
+
+@keyframes pulse-critical {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
 /* ============================================
    MAIN CONTENT - SMOOTH SCROLL
    ============================================ */
