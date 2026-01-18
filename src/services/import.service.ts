@@ -39,25 +39,37 @@ class ImportService {
 
       if (zipFile) {
         try {
+          console.log('📦 Lade ZIP-Datei...');
           const zip = await JSZip.loadAsync(zipFile);
           const imageFolder = zip.folder('images');
 
           if (imageFolder) {
-            const files = Object.keys(zip.files).filter(name => 
+            const files = Object.keys(zip.files).filter(name =>
               name.startsWith('images/') && !zip.files[name].dir
             );
+
+            console.log(`📷 Gefunden: ${files.length} Bilder im ZIP`);
 
             for (const filename of files) {
               const file = zip.files[filename];
               const blob = await file.async('blob');
               const basename = filename.replace('images/', '');
               imageMap.set(basename, blob);
+              console.log(`   ✅ Geladen: ${basename} (${blob.size} bytes)`);
             }
+
+            console.log(`📊 Insgesamt ${imageMap.size} Bilder in Map gespeichert`);
+          } else {
+            console.warn('⚠️ Kein "images" Ordner im ZIP gefunden');
           }
         } catch (error) {
-          console.error('Fehler beim Laden des ZIP:', error);
+          console.error('❌ Fehler beim Laden des ZIP:', error);
         }
+      } else {
+        console.log('ℹ️ Kein ZIP-Archiv angegeben - erstelle Platzhalter-Bilder');
       }
+
+      console.log(`📄 Starte Import von ${backupData.documents.length} Dokumenten...`);
 
       for (const backupDoc of backupData.documents) {
         try {
@@ -66,15 +78,39 @@ class ImportService {
           const possibleExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
           let foundBlob: Blob | undefined;
 
-          for (const ext of possibleExtensions) {
-            const filename = `${backupDoc.originalFilename}${ext}`;
-            foundBlob = imageMap.get(filename);
+          // Erstelle Liste möglicher Basisnamen (wie beim Export)
+          const possibleBasenames: string[] = [];
+
+          if (backupDoc.originalFilename) {
+            possibleBasenames.push(backupDoc.originalFilename);
+          }
+
+          // Fallback: filename ohne Extension (wie beim Export)
+          const filenameWithoutExt = backupDoc.filename.replace(/\.[^/.]+$/, '');
+          if (!possibleBasenames.includes(filenameWithoutExt)) {
+            possibleBasenames.push(filenameWithoutExt);
+          }
+
+          console.log(`🔍 Suche Bild für "${backupDoc.filename}"`);
+          console.log(`   Mögliche Basisnamen: ${possibleBasenames.join(', ')}`);
+
+          // Suche nach Bild mit allen Kombinationen
+          for (const basename of possibleBasenames) {
+            for (const ext of possibleExtensions) {
+              const filename = `${basename}${ext}`;
+              foundBlob = imageMap.get(filename);
+              if (foundBlob) {
+                console.log(`   ✅ Bild gefunden: ${filename} (${foundBlob.size} bytes)`);
+                break;
+              }
+            }
             if (foundBlob) break;
           }
 
           if (foundBlob) {
             blob = foundBlob;
           } else {
+            console.warn(`   ⚠️ Bild nicht gefunden - Erstelle Platzhalter`);
             blob = this.createPlaceholderImage(backupDoc.filename);
           }
 
