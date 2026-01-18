@@ -6,6 +6,7 @@ import { Customers } from './pages/Customers';
 import { MonthView } from './pages/MonthView';
 import { Calendar } from './pages/Calendar';
 import { Duplicates } from './pages/Duplicates';
+import { Modal } from './components/Modal/Modal';
 import './App.css';
 
 export default function App() {
@@ -43,6 +44,8 @@ export default function App() {
         {activeView === 'calendar' && <Calendar />}
         {activeView === 'duplicates' && <Duplicates />}
       </main>
+
+      <Modal />
     </div>
   );
 }

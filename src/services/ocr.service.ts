@@ -99,30 +99,47 @@ class OCRService {
     }
 
     // RECHNUNG AN: Name in nächster Zeile (typisches Rechnungsformat)
-    const rechnungAnPattern = /RECHNUNG\s+AN:\s*(?:RECHNUNG\s+NR[.\s\d]*)?[\r\n]+(?:\d{1,2}\.\s*[A-Z]+\s*\d{4}[\r\n]+)?([A-ZÄÖÜ]+(?:\s+[A-ZÄÖÜ]+)+)/i;
+    // Extrahiere nur 2 Wörter (Vor- und Nachname), keine Straße/Adresse
+    const rechnungAnPattern = /RECHNUNG\s+AN:\s*(?:RECHNUNG\s+NR[.\s\d]*)?[\r\n]+(?:\d{1,2}\.\s*[A-Z]+\s*\d{4}[\r\n]+)?([A-ZÄÖÜ]+)\s+([A-ZÄÖÜ]+)(?=\s|[\r\n])/i;
     const rechnungMatch = text.match(rechnungAnPattern);
-    if (rechnungMatch && rechnungMatch[1]) {
-      const customer = rechnungMatch[1].trim();
-      // Konvertiere zu Title Case (Vincent Vogelstetter)
-      const titleCase = customer.split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
-      console.log('✅ Kunde von Rechnung AN:', titleCase);
-      return titleCase;
-    }
-
-    // Vollständiger Name in GROSSBUCHSTABEN (mindestens Vor- und Nachname)
-    const fullNamePattern = /\b([A-ZÄÖÜ]{2,})\s+([A-ZÄÖÜ]{2,})\b/;
-    const fullNameMatch = text.match(fullNamePattern);
-    if (fullNameMatch) {
-      const firstName = fullNameMatch[1];
-      const lastName = fullNameMatch[2];
+    if (rechnungMatch && rechnungMatch[1] && rechnungMatch[2]) {
+      const firstName = rechnungMatch[1].trim();
+      const lastName = rechnungMatch[2].trim();
 
       // Ignoriere bekannte Nicht-Namen
-      const ignoreList = ['RECHNUNG NR', 'APRIL', 'MAI', 'JUNI', 'JULI', 'JANUAR', 'FEBRUAR', 'MARZ', 'AUGUST', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DEZEMBER'];
-      const fullName = `${firstName} ${lastName}`;
+      const ignoreList = ['RECHNUNG', 'NR', 'APRIL', 'MAI', 'JUNI', 'JULI', 'JANUAR', 'FEBRUAR', 'MARZ', 'AUGUST', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DEZEMBER'];
+      if (!ignoreList.includes(firstName) && !ignoreList.includes(lastName)) {
+        // Konvertiere zu Title Case (Vincent Vogelstetter)
+        const titleCase = `${firstName.charAt(0)}${firstName.slice(1).toLowerCase()} ${lastName.charAt(0)}${lastName.slice(1).toLowerCase()}`;
+        console.log('✅ Kunde von Rechnung AN:', titleCase);
+        return titleCase;
+      }
+    }
 
-      if (!ignoreList.some(ignore => fullName.includes(ignore))) {
+    // Vollständiger Name in GROSSBUCHSTABEN (nur 2 Wörter - Vor- und Nachname)
+    const fullNamePattern = /\b([A-ZÄÖÜ]{2,})\s+([A-ZÄÖÜ]{2,})\b/;
+    const fullNameMatches = Array.from(text.matchAll(new RegExp(fullNamePattern, 'g')));
+
+    for (const match of fullNameMatches) {
+      const firstName = match[1];
+      const lastName = match[2];
+
+      // Ignoriere bekannte Nicht-Namen, Zahlen und Straßennamen
+      const ignoreList = ['RECHNUNG', 'NR', 'APRIL', 'MAI', 'JUNI', 'JULI', 'JANUAR', 'FEBRUAR', 'MARZ', 'AUGUST', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DEZEMBER', 'STRASSE', 'JEDE', 'STADT'];
+
+      if (!ignoreList.includes(firstName) && !ignoreList.includes(lastName)) {
+        // Prüfe ob das Wort danach eine Zahl oder "STRASSE" ist (dann ist es eine Adresse)
+        const nextWordPattern = new RegExp(`${firstName}\\s+${lastName}\\s+(\\S+)`, 'i');
+        const nextWordMatch = text.match(nextWordPattern);
+
+        if (nextWordMatch && nextWordMatch[1]) {
+          const nextWord = nextWordMatch[1].toUpperCase();
+          // Wenn nächstes Wort eine Zahl oder STRASSE/STR ist, überspringe
+          if (/^\d+$/.test(nextWord) || nextWord.includes('STRASSE') || nextWord.includes('STR')) {
+            continue;
+          }
+        }
+
         // Konvertiere zu Title Case
         const titleCase = `${firstName.charAt(0)}${firstName.slice(1).toLowerCase()} ${lastName.charAt(0)}${lastName.slice(1).toLowerCase()}`;
         console.log('✅ Kunde (Vollständiger Name):', titleCase);

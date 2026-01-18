@@ -10,8 +10,9 @@ import { Trash2, Download, Upload, Search, RefreshCw, ImagePlus, ArrowUpDown, Ed
 import './AllDocuments.css';
 
 interface AllDocumentsProps {
-  setSwipeEnabled: (enabled: boolean) => void;
-  refreshTrigger: number;
+  setSwipeEnabled?: (enabled: boolean) => void;
+  refreshTrigger?: number;
+  deleteMode?: boolean;
 }
 
 type SortOption = 'alphabet' | 'date' | 'upload';
