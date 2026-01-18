@@ -4,12 +4,15 @@ import { Document } from '../types/document';
 
 interface BackupDocument {
   filename: string;
-  originalFilename: string;
+  originalFilename?: string;
   uploadDate: string;
-  customer?: string;
-  amount?: number;
+  documentDate?: string;
+  customer?: string | null;
+  amount?: number | null;
+  extractedText?: string | null;
+  ocrConfidence?: number | null;
+  fileHash?: string;
   invoiceNumber?: string;
-  date?: string;
   ocrText?: string;
   tags?: string[];
 }
@@ -80,10 +83,13 @@ class ImportService {
             originalFilename: backupDoc.originalFilename,
             blob: blob,
             uploadDate: new Date(backupDoc.uploadDate),
-            customer: backupDoc.customer || undefined,
-            amount: backupDoc.amount || undefined,
+            documentDate: backupDoc.documentDate ? new Date(backupDoc.documentDate) : undefined,
+            customer: backupDoc.customer ?? undefined,
+            amount: backupDoc.amount ?? undefined,
+            extractedText: backupDoc.extractedText ?? undefined,
+            ocrConfidence: backupDoc.ocrConfidence ?? undefined,
+            fileHash: backupDoc.fileHash,
             invoiceNumber: backupDoc.invoiceNumber,
-            date: backupDoc.date ? new Date(backupDoc.date) : undefined,
             ocrText: backupDoc.ocrText,
             tags: backupDoc.tags
           };
@@ -105,7 +111,7 @@ class ImportService {
 
   async exportToJSON(): Promise<string> {
     const documents = await db.documents.toArray();
-    
+
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
@@ -113,21 +119,24 @@ class ImportService {
         filename: doc.filename,
         originalFilename: doc.originalFilename,
         uploadDate: doc.uploadDate.toISOString(),
+        documentDate: doc.documentDate?.toISOString(),
         customer: doc.customer,
         amount: doc.amount,
+        extractedText: doc.extractedText,
+        ocrConfidence: doc.ocrConfidence,
+        fileHash: doc.fileHash,
         invoiceNumber: doc.invoiceNumber,
-        date: doc.date?.toISOString(),
         ocrText: doc.ocrText,
         tags: doc.tags
       }))
     };
-    
+
     return JSON.stringify(exportData, null, 2);
   }
 
   async exportWithImages(): Promise<{ json: Blob; zip: Blob }> {
     const documents = await db.documents.toArray();
-    
+
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
@@ -135,32 +144,37 @@ class ImportService {
         filename: doc.filename,
         originalFilename: doc.originalFilename,
         uploadDate: doc.uploadDate.toISOString(),
+        documentDate: doc.documentDate?.toISOString(),
         customer: doc.customer,
         amount: doc.amount,
+        extractedText: doc.extractedText,
+        ocrConfidence: doc.ocrConfidence,
+        fileHash: doc.fileHash,
         invoiceNumber: doc.invoiceNumber,
-        date: doc.date?.toISOString(),
         ocrText: doc.ocrText,
         tags: doc.tags
       }))
     };
-    
+
     const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: 'application/json'
     });
-    
+
     const zip = new JSZip();
     const folder = zip.folder('images');
-    
+
     for (const doc of documents) {
       if (doc.blob && folder) {
         const extension = this.getFileExtension(doc.blob.type);
-        const filename = `${doc.originalFilename}${extension}`;
+        // Verwende filename als Fallback, wenn originalFilename nicht vorhanden ist
+        const basename = doc.originalFilename || doc.filename.replace(/\.[^/.]+$/, '');
+        const filename = `${basename}${extension}`;
         folder.file(filename, doc.blob);
       }
     }
-    
+
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    
+
     return { json: jsonBlob, zip: zipBlob };
   }
 

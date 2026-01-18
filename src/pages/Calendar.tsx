@@ -26,8 +26,8 @@ export const Calendar: React.FC<CalendarProps> = ({ setSwipeEnabled }) => {
     
     const allDocs = await db.documents.toArray();
     const monthDocs = allDocs.filter(doc => {
-      if (!doc.date) return false;
-      const docDate = new Date(doc.date);
+      if (!doc.documentDate) return false;
+      const docDate = new Date(doc.documentDate);
       return docDate >= startDate && docDate <= endDate;
     });
     
@@ -64,8 +64,8 @@ export const Calendar: React.FC<CalendarProps> = ({ setSwipeEnabled }) => {
 
   const getDocumentsForDate = (date: Date) => {
     return documents.filter(doc => {
-      if (!doc.date) return false;
-      const docDate = new Date(doc.date);
+      if (!doc.documentDate) return false;
+      const docDate = new Date(doc.documentDate);
       return docDate.toDateString() === date.toDateString();
     });
   };

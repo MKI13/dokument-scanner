@@ -23,7 +23,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [amount, setAmount] = useState(document.amount?.toString() || '');
   const [invoiceNumber, setInvoiceNumber] = useState(document.invoiceNumber || '');
   const [date, setDate] = useState(
-    document.date ? new Date(document.date).toISOString().split('T')[0] : ''
+    document.documentDate ? new Date(document.documentDate).toISOString().split('T')[0] : ''
   );
   const [tags, setTags] = useState(document.tags?.join(', ') || '');
   const [ocrText, setOcrText] = useState(document.ocrText || '');
@@ -146,7 +146,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       customer !== (document.customer || '') ||
       amount !== (document.amount?.toString() || '') ||
       invoiceNumber !== (document.invoiceNumber || '') ||
-      date !== (document.date ? new Date(document.date).toISOString().split('T')[0] : '') ||
+      date !== (document.documentDate ? new Date(document.documentDate).toISOString().split('T')[0] : '') ||
       tags !== (document.tags?.join(', ') || '') ||
       ocrText !== (document.ocrText || '');
 
