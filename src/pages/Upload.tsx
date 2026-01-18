@@ -5,7 +5,7 @@ import { modalService } from '../services/modal.service';
 import './Upload.css';
 
 interface UploadProps {
-  setSwipeEnabled: (enabled: boolean) => void;
+  setSwipeEnabled?: (enabled: boolean) => void;
 }
 
 export const Upload: React.FC<UploadProps> = ({ setSwipeEnabled }) => {

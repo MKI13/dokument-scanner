@@ -3,7 +3,7 @@ import { ocrService } from './ocr.service';
 import { Document } from '../types/document';
 
 export interface ProcessingProgress {
-  status: 'processing' | 'complete' | 'error';
+  status: 'idle' | 'processing' | 'complete' | 'error';
   progress: number;
   message: string;
 }
