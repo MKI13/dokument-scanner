@@ -81,8 +81,10 @@ class ImportService {
           // Erstelle Liste möglicher Basisnamen (wie beim Export)
           const possibleBasenames: string[] = [];
 
+          // originalFilename könnte bereits Extension haben - entferne sie
           if (backupDoc.originalFilename) {
-            possibleBasenames.push(backupDoc.originalFilename);
+            const nameWithoutExt = backupDoc.originalFilename.replace(/\.[^/.]+$/, '');
+            possibleBasenames.push(nameWithoutExt);
           }
 
           // Fallback: filename ohne Extension (wie beim Export)
