@@ -3,7 +3,7 @@ import { ocrService } from './ocr.service';
 import { Document } from '../types/document';
 
 export interface ProcessingProgress {
-  status: 'processing' | 'complete' | 'error';
+  status: 'idle' | 'processing' | 'complete' | 'error';
   progress: number;
   message: string;
 }
@@ -155,10 +155,57 @@ class DocumentService {
   }
 
   private async calculateFileHash(file: File): Promise<string> {
+    // Prüfe ob crypto.subtle verfügbar ist (nur in HTTPS oder localhost)
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (error) {
+        console.warn('⚠️ crypto.subtle fehlgeschlagen, verwende Fallback-Hash');
+      }
+    }
+
+    // Fallback für HTTP (crypto.subtle nicht verfügbar)
+    console.log('ℹ️ Verwende Fallback-Hash (HTTP-Kontext)');
+    return this.calculateSimpleHash(file);
+  }
+
+  private async calculateSimpleHash(file: File): Promise<string> {
+    // Einfacher Hash basierend auf Dateiname, Größe und erstem/letztem Chunk
     const arrayBuffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const bytes = new Uint8Array(arrayBuffer);
+
+    // Kombiniere Dateiname, Größe und Bytes für eindeutigen Hash
+    let hash = 0;
+    const str = file.name + file.size + file.lastModified;
+
+    // String-Hash
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+
+    // Erste 1KB des Inhalts
+    const chunkSize = Math.min(1024, bytes.length);
+    for (let i = 0; i < chunkSize; i++) {
+      hash = ((hash << 5) - hash) + bytes[i];
+      hash = hash & hash;
+    }
+
+    // Letzte 1KB des Inhalts (wenn Datei groß genug)
+    if (bytes.length > 1024) {
+      const startPos = bytes.length - 1024;
+      for (let i = startPos; i < bytes.length; i++) {
+        hash = ((hash << 5) - hash) + bytes[i];
+        hash = hash & hash;
+      }
+    }
+
+    // Konvertiere zu Hex-String
+    return Math.abs(hash).toString(16).padStart(8, '0') + '-' + file.size.toString(16);
   }
 
   private generateFilename(ocrResult: any, file: File): string {
