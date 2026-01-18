@@ -73,10 +73,10 @@ class OCRService {
     // Website Pattern (www.FIRMA.de → FIRMA)
     const websitePattern = /(?:www\s*\.\s*|https?:\/\/)([\w-]+)\s*\.\s*(de|com|net|org|eu|at|ch|fr|gr)/gi;
     const websiteMatches = Array.from(text.matchAll(websitePattern));
-    
+
     for (const match of websiteMatches) {
       const domain = match[1].toLowerCase();
-      
+
       if (!['gmail', 'yahoo', 'web', 'mail', 'info', 'email'].includes(domain)) {
         const customer = domain.charAt(0).toUpperCase() + domain.slice(1);
         console.log('✅ Kunde von Website:', customer);
@@ -87,10 +87,10 @@ class OCRService {
     // Email Pattern
     const emailPattern = /[\w.-]+@([\w-]+)\.(de|com|net|org)/gi;
     const emailMatches = Array.from(text.matchAll(emailPattern));
-    
+
     for (const match of emailMatches) {
       const domain = match[1].toLowerCase();
-      
+
       if (!['gmail', 'yahoo', 'web', 'mail', 'info'].includes(domain)) {
         const customer = domain.charAt(0).toUpperCase() + domain.slice(1);
         console.log('✅ Kunde von Email:', customer);
@@ -98,18 +98,49 @@ class OCRService {
       }
     }
 
+    // RECHNUNG AN: Name in nächster Zeile (typisches Rechnungsformat)
+    const rechnungAnPattern = /RECHNUNG\s+AN:\s*(?:RECHNUNG\s+NR[.\s\d]*)?[\r\n]+(?:\d{1,2}\.\s*[A-Z]+\s*\d{4}[\r\n]+)?([A-ZÄÖÜ]+(?:\s+[A-ZÄÖÜ]+)+)/i;
+    const rechnungMatch = text.match(rechnungAnPattern);
+    if (rechnungMatch && rechnungMatch[1]) {
+      const customer = rechnungMatch[1].trim();
+      // Konvertiere zu Title Case (Vincent Vogelstetter)
+      const titleCase = customer.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+      console.log('✅ Kunde von Rechnung AN:', titleCase);
+      return titleCase;
+    }
+
+    // Vollständiger Name in GROSSBUCHSTABEN (mindestens Vor- und Nachname)
+    const fullNamePattern = /\b([A-ZÄÖÜ]{2,})\s+([A-ZÄÖÜ]{2,})\b/;
+    const fullNameMatch = text.match(fullNamePattern);
+    if (fullNameMatch) {
+      const firstName = fullNameMatch[1];
+      const lastName = fullNameMatch[2];
+
+      // Ignoriere bekannte Nicht-Namen
+      const ignoreList = ['RECHNUNG NR', 'APRIL', 'MAI', 'JUNI', 'JULI', 'JANUAR', 'FEBRUAR', 'MARZ', 'AUGUST', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DEZEMBER'];
+      const fullName = `${firstName} ${lastName}`;
+
+      if (!ignoreList.some(ignore => fullName.includes(ignore))) {
+        // Konvertiere zu Title Case
+        const titleCase = `${firstName.charAt(0)}${firstName.slice(1).toLowerCase()} ${lastName.charAt(0)}${lastName.slice(1).toLowerCase()}`;
+        console.log('✅ Kunde (Vollständiger Name):', titleCase);
+        return titleCase;
+      }
+    }
+
     // Firmenname Pattern
     const patterns = [
       /(?:Firma|Company|Kunde|Customer)[:\s]+([A-ZÄÖÜ][a-zäöüß\s]+(?:[A-ZÄÖÜ][a-zäöüß]+)?)/i,
-      /^([A-ZÄÖÜ][a-zäöüß]+\s+(?:GmbH|AG|UG|KG|OHG))/m,
-      /Rechnung\s+(?:an|für)[:\s]+([A-ZÄÖÜ][a-zäöüß\s]+)/i
+      /^([A-ZÄÖÜ][a-zäöüß]+\s+(?:GmbH|AG|UG|KG|OHG))/m
     ];
 
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match && match[1]) {
         const customer = match[1].trim();
-        if (customer.length > 2 && customer.length < 50) {
+        if (customer.length > 2 && customer.length < 50 && !customer.includes('RECHNUNG')) {
           console.log('✅ Kunde gefunden:', customer);
           return customer;
         }
