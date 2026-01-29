@@ -8,40 +8,16 @@ export function extractCustomerImproved(text: string): string | null {
     .replace(/\s+/g, ' ')  // Mehrfache Leerzeichen
     .replace(/\n+/g, '\n'); // Mehrfache Zeilenumbrüche
 
-  // 1. PRIORITÄT: Firmen mit Rechtsform (GmbH, AG, UG, etc.)
-  const companyPatterns = [
-    // Vollständige Firmennamen mit Rechtsform
-    /([A-ZÄÖÜ][a-zäöüß]+(?: [A-ZÄÖÜ][a-zäöüß]+){0,3})\s+(GmbH|AG|UG|KG|OHG|GbR|e\.?K\.?|mbH)/gi,
-    // Firmennamen in GROSSBUCHSTABEN mit Rechtsform
-    /([A-ZÄÖÜ]{3,}(?:\s+[A-ZÄÖÜ]{2,}){0,2})\s+(GMBH|AG|UG|KG|OHG)/gi,
-  ];
-
-  for (const pattern of companyPatterns) {
-    const matches = Array.from(normalizedText.matchAll(pattern));
-    for (const match of matches) {
-      let company = `${match[1]} ${match[2]}`.trim();
-
-      // Entferne "Rechnung" am Anfang
-      company = company.replace(/^RECHNUNG\s+/i, '');
-
-      // Ignoriere bekannte Fehlerkennungen
-      if (!company.match(/^(RECHNUNG|INVOICE|DATUM|NUMMER)/i)) {
-        console.log('✅ Firma gefunden (Rechtsform):', company);
-        return company;
-      }
-    }
-  }
-
-  // 2. PRIORITÄT: Bekannte deutsche Handelsketten und Firmen
+  // 1. PRIORITÄT: Bekannte deutsche Handelsketten und Firmen (ZUERST prüfen!)
   const knownChains = [
+    'HAGEBAUMARKT', 'HAGEBAU', 'HORNBACH', 'BAUHAUS', 'OBI', 'TOOM',
     'ALDI', 'LIDL', 'REWE', 'EDEKA', 'PENNY', 'NETTO', 'KAUFLAND',
-    'HORNBACH', 'BAUHAUS', 'OBI', 'HAGEBAU', 'HAGEBAUMARKT', 'TOOM',
-    'MERCEDES', 'BMW', 'VW', 'AUDI', 'OPEL', 'VOLKSWAGEN',
+    'MERCEDES', 'BMW', 'VOLKSWAGEN', 'VW', 'AUDI', 'OPEL',
     'SHELL', 'ARAL', 'JET', 'ESSO', 'TOTAL', 'ENI',
     'DM', 'ROSSMANN', 'MÜLLER', 'DROGERIEM',
     'ATU', 'PITSTOP',
     'FINANZAMT', 'GEWERBE', 'KLARNA', 'PAYPAL',
-    'AMAZON', 'EBAY', 'ZALANDO', 'OTTO'
+    'AMAZON', 'EBAY', 'ZALANDO', 'OTTO', 'MEDIAMARKT', 'SATURN'
   ];
 
   for (const chain of knownChains) {
@@ -51,6 +27,30 @@ export function extractCustomerImproved(text: string): string | null {
       const cleaned = chain.charAt(0).toUpperCase() + chain.slice(1).toLowerCase();
       console.log('✅ Bekannte Kette gefunden:', cleaned);
       return cleaned;
+    }
+  }
+
+  // 2. PRIORITÄT: Firmen mit Rechtsform (GmbH, AG, UG, etc.)
+  const companyPatterns = [
+    // Nur das ERSTE Wort vor der Rechtsform (kein langer Name)
+    /\b([A-ZÄÖÜ][a-zäöüß]{2,})\s+(?:GmbH|AG|UG|KG|OHG|GbR|e\.?K\.?|mbH)/gi,
+    // Grossbuchstaben + Rechtsform
+    /\b([A-ZÄÖÜ]{3,})\s+(?:GMBH|AG|UG|KG|OHG)/gi,
+  ];
+
+  for (const pattern of companyPatterns) {
+    const matches = Array.from(normalizedText.matchAll(pattern));
+    for (const match of matches) {
+      let company = match[1].trim();
+
+      // Entferne "Rechnung" am Anfang
+      company = company.replace(/^RECHNUNG\s+/i, '');
+
+      // Ignoriere bekannte Fehlerkennungen
+      if (!company.match(/^(RECHNUNG|INVOICE|DATUM|NUMMER)/i) && company.length >= 3) {
+        console.log('✅ Firma gefunden (Rechtsform):', company);
+        return company;
+      }
     }
   }
 

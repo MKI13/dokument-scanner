@@ -209,34 +209,38 @@ class DocumentService {
   }
 
   private generateFilename(ocrResult: any, file: File): string {
-    // Datum im lokalen Format (ohne Timezone-Probleme)
+    // Datum im lokalen Format (ohne Timezone-Probleme) mit Unterstrichen
     let date: string;
     if (ocrResult.date) {
       const d = new Date(ocrResult.date);
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      date = `${year}-${month}-${day}`;
+      date = `${year}_${month}_${day}`;
     } else {
       const d = new Date();
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      date = `${year}-${month}-${day}`;
+      date = `${year}_${month}_${day}`;
     }
 
-    // Kunde-Name bereinigen (kurz halten)
+    // Kunde-Name bereinigen (nur ERSTER Name!)
     let customer = 'Unbekannt';
     if (ocrResult.customer) {
-      customer = ocrResult.customer
+      // Nur das erste Wort nehmen, Title Case
+      const firstWord = ocrResult.customer
         .replace(/[^a-zA-Z0-9äöüÄÖÜß\s]/g, '') // Sonderzeichen entfernen
-        .split(/\s+/)  // In Wörter teilen
-        .filter((word: string) => word.length > 0)
-        .slice(0, 2)  // Maximal 2 Wörter
-        .join('_');
+        .trim()
+        .split(/\s+/)[0];  // Nur erstes Wort
+
+      if (firstWord && firstWord.length > 0) {
+        // Title Case: Erster Buchstabe groß, Rest klein
+        customer = firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+      }
     }
 
-    // Betrag formatieren
+    // Betrag formatieren (ohne Leerzeichen)
     const amount = ocrResult.amount
       ? ocrResult.amount.toFixed(2).replace('.', ',')
       : '0,00';
