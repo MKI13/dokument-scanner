@@ -19,11 +19,15 @@ export function extractCustomerImproved(text: string): string | null {
   for (const pattern of companyPatterns) {
     const matches = Array.from(normalizedText.matchAll(pattern));
     for (const match of matches) {
-      const company = `${match[1]} ${match[2]}`;
+      let company = `${match[1]} ${match[2]}`.trim();
+
+      // Entferne "Rechnung" am Anfang
+      company = company.replace(/^RECHNUNG\s+/i, '');
+
       // Ignoriere bekannte Fehlerkennungen
-      if (!company.includes('RECHNUNG') && !company.includes('INVOICE')) {
+      if (!company.match(/^(RECHNUNG|INVOICE|DATUM|NUMMER)/i)) {
         console.log('✅ Firma gefunden (Rechtsform):', company);
-        return company.trim();
+        return company;
       }
     }
   }
@@ -31,30 +35,20 @@ export function extractCustomerImproved(text: string): string | null {
   // 2. PRIORITÄT: Bekannte deutsche Handelsketten und Firmen
   const knownChains = [
     'ALDI', 'LIDL', 'REWE', 'EDEKA', 'PENNY', 'NETTO', 'KAUFLAND',
-    'HORNBACH', 'BAUHAUS', 'OBI', 'HAGEBAU', 'TOOM',
-    'MERCEDES', 'BMW', 'VW', 'AUDI', 'OPEL',
+    'HORNBACH', 'BAUHAUS', 'OBI', 'HAGEBAU', 'HAGEBAUMARKT', 'TOOM',
+    'MERCEDES', 'BMW', 'VW', 'AUDI', 'OPEL', 'VOLKSWAGEN',
     'SHELL', 'ARAL', 'JET', 'ESSO', 'TOTAL', 'ENI',
-    'DM', 'ROSSMANN', 'MÜLLER',
+    'DM', 'ROSSMANN', 'MÜLLER', 'DROGERIEM',
     'ATU', 'PITSTOP',
-    'FINANZAMT', 'GEWERBE', 'KLARNA', 'PAYPAL'
+    'FINANZAMT', 'GEWERBE', 'KLARNA', 'PAYPAL',
+    'AMAZON', 'EBAY', 'ZALANDO', 'OTTO'
   ];
 
   for (const chain of knownChains) {
-    const chainPattern = new RegExp(`\\b${chain}[\\w\\s-]*`, 'gi');
-    const match = normalizedText.match(chainPattern);
-    if (match) {
-      const found = match[0].trim();
-      // Bereinige den Namen
-      let cleaned = found
-        .replace(/\s+(GMBH|AG|UG|SERVICE|STATION|SUD|MARKT|MARKET).*$/i, ' $1')
-        .trim();
-
-      // Title Case für bessere Lesbarkeit
-      cleaned = cleaned
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
-
+    const chainPattern = new RegExp(`\\b${chain}`, 'gi');
+    if (chainPattern.test(normalizedText)) {
+      // Nur den Hauptnamen nehmen (keine Zusätze wie "GmbH", "Markt", etc.)
+      const cleaned = chain.charAt(0).toUpperCase() + chain.slice(1).toLowerCase();
       console.log('✅ Bekannte Kette gefunden:', cleaned);
       return cleaned;
     }
@@ -94,8 +88,14 @@ export function extractCustomerImproved(text: string): string | null {
     if (match && match[1]) {
       let customer = match[1].trim();
 
+      // Entferne "Rechnung" am Anfang
+      customer = customer.replace(/^RECHNUNG\s+/i, '');
+
       // Entferne Straßenadressen und Nummern
       customer = customer.replace(/\s+\d+.*$/, '').trim();
+
+      // Nur erstes Wort nehmen (Firmenname)
+      customer = customer.split(/\s+/)[0];
 
       // Mindestlänge
       if (customer.length >= 3 && customer.length <= 40) {
@@ -111,7 +111,17 @@ export function extractCustomerImproved(text: string): string | null {
   const topMatch = firstLines.match(companyAtTopPattern);
 
   if (topMatch && topMatch[1]) {
-    const company = topMatch[1].trim();
+    let company = topMatch[1].trim();
+
+    // Entferne "Rechnung" am Anfang
+    company = company.replace(/^RECHNUNG\s+/i, '');
+
+    // Nur erstes Wort wenn mehrere Wörter
+    const words = company.split(/\s+/);
+    if (words.length > 1) {
+      company = words[0];
+    }
+
     const ignoreList = ['RECHNUNG', 'INVOICE', 'DATUM', 'DATE', 'NUMMER', 'NUMBER'];
 
     if (company.length >= 3 && !ignoreList.some(word => company.includes(word))) {
@@ -121,7 +131,7 @@ export function extractCustomerImproved(text: string): string | null {
   }
 
   // 6. Fallback: Erster Eigenname in Großbuchstaben (> 3 Zeichen)
-  const namePattern = /\b([A-ZÄÖÜ]{3,}(?:\s+[A-ZÄÖÜ]{3,})?)\b/g;
+  const namePattern = /\b([A-ZÄÖÜ]{3,})\b/g;
   const nameMatches = Array.from(normalizedText.matchAll(namePattern));
 
   const ignoreWords = [
@@ -130,17 +140,14 @@ export function extractCustomerImproved(text: string): string | null {
     'SUMME', 'TOTAL', 'BETRAG', 'AMOUNT', 'GESAMT',
     'JANUAR', 'FEBRUAR', 'MARZ', 'APRIL', 'MAI', 'JUNI',
     'JULI', 'AUGUST', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DEZEMBER',
-    'STRASSE', 'STR', 'PLZ', 'ORT', 'STADT'
+    'STRASSE', 'STR', 'PLZ', 'ORT', 'STADT', 'VON', 'VOM', 'AN', 'BEI'
   ];
 
   for (const match of nameMatches) {
     const name = match[1].trim();
     if (!ignoreWords.some(word => name.includes(word)) && name.length >= 3) {
-      // Title Case
-      const titleCase = name
-        .split(' ')
-        .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-        .join(' ');
+      // Title Case (nur erstes Wort)
+      const titleCase = name.charAt(0) + name.slice(1).toLowerCase();
       console.log('✅ Firma (Fallback):', titleCase);
       return titleCase;
     }
@@ -230,22 +237,29 @@ export function extractDateImproved(text: string): Date | null {
 export function extractAmountImproved(text: string): number | null {
   console.log('🔍 Suche Betrag (verbessert)');
 
-  // Normalisiere Text
-  const normalized = text.replace(/\s+/g, ' ');
+  // Normalisiere Text - OCR erkennt € manchmal als C, e, o, etc.
+  const normalized = text
+    .replace(/\s+/g, ' ')
+    .replace(/[Cc©]\s*(?=\d)/g, '€ ')  // C vor Zahl → €
+    .replace(/(\d)\s*[Cc©]/g, '$1 €')  // C nach Zahl → €
+    .replace(/[oO0]\s*(?=\d)/g, '€ ');  // O vor Zahl → €
 
   // Deutsche Betragsformate mit verschiedenen Schlüsselwörtern
   const amountPatterns = [
-    // "SUMME: 123,45 EUR" oder "GESAMT: 123,45€"
-    /(?:SUMME|GESAMT|TOTAL|ENDBETRAG|BETRAG|AMOUNT|SUM)[\s:€]*([0-9]{1,}[.,]\d{2})\s*(?:EUR|€)?/gi,
+    // "SUMME: 123,45 EUR" oder "GESAMT: 123,45€" oder "GESAMT: 123,45C"
+    /(?:SUMME|GESAMT|TOTAL|ENDBETRAG|BETRAG|RECHNUNGSBETRAG|AMOUNT|SUM|BRUTTO|NETTO)[\s:€CcOo]*([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c)?/gi,
 
-    // "Zu zahlen: 123,45"
-    /(?:ZU\s+ZAHLEN|ZAHLBAR|TO\s+PAY|PAYABLE)[\s:€]*([0-9]{1,}[.,]\d{2})\s*(?:EUR|€)?/gi,
+    // "Zu zahlen: 123,45" oder "Fälliger Betrag: 123,45"
+    /(?:ZU\s+ZAHLEN|ZAHLBAR|F[ÄA]LLIG|TO\s+PAY|PAYABLE)[\s:€Cc]*([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c)?/gi,
 
-    // "123,45 EUR" oder "123,45€" (am Ende einer Zeile)
-    /([0-9]{1,}[.,]\d{2})\s*(?:EUR|€)(?=\s|$)/gi,
+    // "123,45 EUR" oder "123,45€" oder "123,45C" (am Ende einer Zeile)
+    /([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c)(?=\s|$)/gi,
 
     // "EUR 123,45" oder "€ 123,45"
-    /(?:EUR|€)\s*([0-9]{1,}[.,]\d{2})/gi,
+    /(?:EUR|€|C)\s*([0-9]{1,}[.,]\d{2})/gi,
+
+    // Beträge mit Tausenderpunkt: "1.234,56"
+    /([0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{2})\b/g,
 
     // Nur Betrag mit 2 Dezimalstellen (als Fallback)
     /\b([0-9]{2,}[.,]\d{2})\b/g
@@ -258,7 +272,9 @@ export function extractAmountImproved(text: string): number | null {
     for (const match of matches) {
       if (match[1]) {
         // Konvertiere deutsches Format zu Zahl
-        const cleaned = match[1].replace(/\./g, '').replace(',', '.');
+        const cleaned = match[1]
+          .replace(/\./g, '')  // Tausenderpunkte entfernen
+          .replace(',', '.');  // Komma zu Punkt
         const amount = parseFloat(cleaned);
 
         // Validiere Betrag (zwischen 0,01 und 1.000.000)
