@@ -1,7 +1,9 @@
 // Verbesserte OCR-Extraktion für deutsche Rechnungen
 
 export function extractCustomerImproved(text: string): string | null {
-  console.log('🔍 Suche Kunde (verbessert) in:', text.substring(0, 300));
+  console.log('🔍 Suche Kunde (verbessert)');
+  console.log('📄 Text Länge:', text.length, 'Zeichen');
+  console.log('📄 Erste 400 Zeichen:', text.substring(0, 400));
 
   // Normalisiere Text für bessere Erkennung
   const normalizedText = text
@@ -236,62 +238,81 @@ export function extractDateImproved(text: string): Date | null {
 
 export function extractAmountImproved(text: string): number | null {
   console.log('🔍 Suche Betrag (verbessert)');
+  console.log('📄 Text Länge:', text.length, 'Zeichen');
 
   // Normalisiere Text - OCR erkennt € manchmal als C, e, o, etc.
   const normalized = text
     .replace(/\s+/g, ' ')
-    .replace(/[Cc©]\s*(?=\d)/g, '€ ')  // C vor Zahl → €
-    .replace(/(\d)\s*[Cc©]/g, '$1 €')  // C nach Zahl → €
+    .replace(/[Cc©€eE]\s*(?=\d)/g, '€ ')  // C/e/E vor Zahl → €
+    .replace(/(\d)\s*[Cc©€eE]/g, '$1 €')  // C/e/E nach Zahl → €
     .replace(/[oO0]\s*(?=\d)/g, '€ ');  // O vor Zahl → €
 
-  // Deutsche Betragsformate mit verschiedenen Schlüsselwörtern
+  console.log('🔍 Normalisierter Text (erste 500 Zeichen):', normalized.substring(0, 500));
+
+  // Deutsche Betragsformate mit verschiedenen Schlüsselwörtern - SEHR AGGRESSIV
   const amountPatterns = [
-    // "SUMME: 123,45 EUR" oder "GESAMT: 123,45€" oder "GESAMT: 123,45C"
-    /(?:SUMME|GESAMT|TOTAL|ENDBETRAG|BETRAG|RECHNUNGSBETRAG|AMOUNT|SUM|BRUTTO|NETTO)[\s:€CcOo]*([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c)?/gi,
+    // PRIORITÄT 1: Mit klaren Schlüsselwörtern
+    /(?:SUMME|GESAMT|TOTAL|ENDBETRAG|BETRAG|RECHNUNGSBETRAG|RECHNUNGSBET|AMOUNT|SUM|BRUTTO|NETTO|SALDO)[\s:*€CcOoeE-]*([0-9]{1,}[.,]\d{2})/gi,
 
-    // "Zu zahlen: 123,45" oder "Fälliger Betrag: 123,45"
-    /(?:ZU\s+ZAHLEN|ZAHLBAR|F[ÄA]LLIG|TO\s+PAY|PAYABLE)[\s:€Cc]*([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c)?/gi,
+    // PRIORITÄT 2: "Zu zahlen", "Fällig"
+    /(?:ZU\s+ZAHLEN|ZAHLBAR|F[ÄA]LLIG|ZAHLUNG|PAY|PAYABLE)[\s:*€CcOoeE-]*([0-9]{1,}[.,]\d{2})/gi,
 
-    // "123,45 EUR" oder "123,45€" oder "123,45C" (am Ende einer Zeile)
-    /([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c)(?=\s|$)/gi,
+    // PRIORITÄT 3: "123,45 EUR/€/C/e" - mit Währung dahinter
+    /([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c|e|E)(?:\s|$|[^0-9])/gi,
 
-    // "EUR 123,45" oder "€ 123,45"
-    /(?:EUR|€|C)\s*([0-9]{1,}[.,]\d{2})/gi,
+    // PRIORITÄT 4: "EUR/€/C 123,45" - Währung davor
+    /(?:EUR|€|C|e|E)\s*([0-9]{1,}[.,]\d{2})/gi,
 
-    // Beträge mit Tausenderpunkt: "1.234,56"
+    // PRIORITÄT 5: Beträge mit Tausenderpunkt "1.234,56"
     /([0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{2})\b/g,
 
-    // Nur Betrag mit 2 Dezimalstellen (als Fallback)
-    /\b([0-9]{2,}[.,]\d{2})\b/g
+    // PRIORITÄT 6: Beliebiger Betrag mit Komma "XX,XX"
+    /\b([0-9]{2,},[0-9]{2})\b/g,
+
+    // PRIORITÄT 7: Betrag mit Punkt "XX.XX" (englisches Format - nur falls nichts anderes)
+    /\b([0-9]{2,}\.[0-9]{2})\b/g
   ];
 
-  const foundAmounts: number[] = [];
+  const foundAmounts: { amount: number; priority: number }[] = [];
 
-  for (const pattern of amountPatterns) {
+  amountPatterns.forEach((pattern, priority) => {
     const matches = Array.from(normalized.matchAll(pattern));
+    console.log(`Pattern ${priority + 1}: Gefunden ${matches.length} Treffer`);
+
     for (const match of matches) {
       if (match[1]) {
         // Konvertiere deutsches Format zu Zahl
-        const cleaned = match[1]
+        let cleaned = match[1]
           .replace(/\./g, '')  // Tausenderpunkte entfernen
           .replace(',', '.');  // Komma zu Punkt
+
         const amount = parseFloat(cleaned);
 
         // Validiere Betrag (zwischen 0,01 und 1.000.000)
         if (!isNaN(amount) && amount >= 0.01 && amount <= 1000000) {
-          foundAmounts.push(amount);
+          console.log(`  ✓ Kandidat: ${amount.toFixed(2)} EUR (Priorität ${priority + 1})`);
+          foundAmounts.push({ amount, priority });
         }
       }
     }
-  }
+  });
 
   if (foundAmounts.length > 0) {
-    // Nehme den größten Betrag (meistens die Gesamtsumme)
-    const maxAmount = Math.max(...foundAmounts);
-    console.log(`✅ Betrag gefunden: ${maxAmount.toFixed(2)} EUR (aus ${foundAmounts.length} Kandidaten)`);
+    // Sortiere nach Priorität (niedrigere Nummer = höhere Priorität)
+    foundAmounts.sort((a, b) => a.priority - b.priority);
+
+    // Nehme die Beträge mit höchster Priorität
+    const highestPriority = foundAmounts[0].priority;
+    const topPriorityAmounts = foundAmounts
+      .filter(a => a.priority === highestPriority)
+      .map(a => a.amount);
+
+    // Von den top Priorität-Beträgen nehme den größten
+    const maxAmount = Math.max(...topPriorityAmounts);
+    console.log(`✅ BETRAG GEFUNDEN: ${maxAmount.toFixed(2)} EUR (Priorität ${highestPriority + 1}, aus ${foundAmounts.length} Kandidaten)`);
     return maxAmount;
   }
 
-  console.log('❌ Kein Betrag gefunden');
+  console.log('⚠️ KEIN BETRAG GEFUNDEN - prüfe OCR Text!');
   return null;
 }

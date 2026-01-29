@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { githubService } from '../services/github.service';
 import { modalService } from '../services/modal.service';
-import { Settings as SettingsIcon, Github, Upload, Download, Check, X } from 'lucide-react';
+import { Settings as SettingsIcon, Github, Upload, Download, Check, X, Info } from 'lucide-react';
 import './Settings.css';
+
+const APP_VERSION = '1.6.0';
 
 export const Settings: React.FC = () => {
   const [githubToken, setGithubToken] = useState('');
@@ -238,6 +240,17 @@ export const Settings: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="settings-section version-info">
+          <div className="section-header">
+            <Info size={24} />
+            <h2>App Information</h2>
+          </div>
+          <div className="version-details">
+            <p><strong>Version:</strong> {APP_VERSION}</p>
+            <p><strong>Dokument Scanner</strong> - OCR basierte Dokumentenverwaltung</p>
+          </div>
         </div>
       </div>
     </div>
