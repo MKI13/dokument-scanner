@@ -1,8 +1,8 @@
-import { Calendar, FileText, Search, Trash2, Upload, Users, Copy } from 'lucide-react';
+import { Calendar, FileText, Search, Trash2, Upload, Users, Copy, Settings } from 'lucide-react';
 
 interface HeaderProps {
-  activeView: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates';
-  onViewChange: (view: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates') => void;
+  activeView: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates' | 'settings';
+  onViewChange: (view: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates' | 'settings') => void;
   onDeleteAll: () => void;
   deleteMode: boolean;
   onToggleDeleteMode: () => void;
@@ -76,6 +76,14 @@ export default function Header({ activeView, onViewChange, onDeleteAll, deleteMo
           {duplicateCount > 0 && (
             <span className="duplicate-badge">{duplicateCount}</span>
           )}
+        </button>
+
+        <button
+          onClick={() => onViewChange('settings')}
+          className={activeView === 'settings' ? 'active' : ''}
+        >
+          <Settings size={20} />
+          <span>Einstellungen</span>
         </button>
 
         <button

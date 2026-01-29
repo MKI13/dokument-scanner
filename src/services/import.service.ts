@@ -204,10 +204,18 @@ class ImportService {
     for (const doc of documents) {
       if (doc.blob && folder) {
         const extension = this.getFileExtension(doc.blob.type);
-        // Verwende filename als Fallback, wenn originalFilename nicht vorhanden ist
-        const basename = doc.originalFilename || doc.filename.replace(/\.[^/.]+$/, '');
+
+        // originalFilename könnte bereits Extension haben - entferne sie
+        let basename: string;
+        if (doc.originalFilename) {
+          basename = doc.originalFilename.replace(/\.[^/.]+$/, '');
+        } else {
+          basename = doc.filename.replace(/\.[^/.]+$/, '');
+        }
+
         const filename = `${basename}${extension}`;
         folder.file(filename, doc.blob);
+        console.log(`📁 Exportiere: ${filename}`);
       }
     }
 

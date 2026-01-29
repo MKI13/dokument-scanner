@@ -1,0 +1,256 @@
+.settings-section {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #f1f5f9;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.settings-description {
+  background: #0f172a;
+  border-left: 4px solid #0ea5e9;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.settings-description p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  color: #f1f5f9;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.form-group input {
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #f1f5f9;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+}
+
+.form-group input::placeholder {
+  color: #64748b;
+}
+
+.form-group small {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.form-group small a {
+  color: #0ea5e9;
+  text-decoration: none;
+}
+
+.form-group small a:hover {
+  text-decoration: underline;
+}
+
+.form-group small code {
+  background: #0f172a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  color: #10b981;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-sync {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.sync-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #334155;
+}
+
+.sync-section h3 {
+  color: #f1f5f9;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.last-sync {
+  background: #0f172a;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.sync-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-sync {
+  flex: 1;
+  min-width: 200px;
+  justify-content: center;
+}
+
+.btn-upload {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.btn-upload:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.btn-download {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+}
+
+.btn-download:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.btn-sync:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.sync-info {
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.sync-info p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.sync-info strong {
+  color: #0ea5e9;
+}
+
+@media (max-width: 768px) {
+  .settings-section {
+    padding: 16px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .sync-actions {
+    flex-direction: column;
+  }
+
+  .btn-sync {
+    min-width: unset;
+    width: 100%;
+  }
+}

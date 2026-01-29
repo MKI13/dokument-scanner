@@ -6,12 +6,13 @@ import { Customers } from './pages/Customers';
 import { MonthView } from './pages/MonthView';
 import { Calendar } from './pages/Calendar';
 import { Duplicates } from './pages/Duplicates';
+import { Settings } from './pages/Settings';
 import { Modal } from './components/Modal/Modal';
 import { useDuplicateCount } from './hooks/useDuplicateCount';
 import './App.css';
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates'>('upload');
+  const [activeView, setActiveView] = useState<'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates' | 'settings'>('upload');
   const [deleteMode, setDeleteMode] = useState(false);
   const duplicateCount = useDuplicateCount();
 
@@ -46,6 +47,7 @@ export default function App() {
         {activeView === 'month' && <MonthView />}
         {activeView === 'calendar' && <Calendar />}
         {activeView === 'duplicates' && <Duplicates />}
+        {activeView === 'settings' && <Settings />}
       </main>
 
       <Modal />
