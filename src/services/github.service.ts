@@ -1,5 +1,4 @@
 import { db } from './database.service';
-import { importService } from './import.service';
 
 interface GitHubConfig {
   token: string;
@@ -75,11 +74,31 @@ class GitHubService {
       console.log('📤 Starte GitHub Sync...');
 
       // Exportiere Daten
-      const { json, zip } = await importService.exportWithImages();
+      const documents = await db.documents.toArray();
 
-      // Konvertiere zu Base64 für GitHub API
-      const jsonBase64 = await this.blobToBase64(json);
-      const zipBase64 = await this.blobToBase64(zip);
+      // Exportiere JSON
+      const exportData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        documents: documents.map(doc => ({
+          filename: doc.filename,
+          originalFilename: doc.originalFilename,
+          uploadDate: doc.uploadDate.toISOString(),
+          documentDate: doc.documentDate?.toISOString(),
+          customer: doc.customer,
+          amount: doc.amount,
+          extractedText: doc.extractedText,
+          ocrConfidence: doc.ocrConfidence,
+          fileHash: doc.fileHash,
+          invoiceNumber: doc.invoiceNumber,
+          ocrText: doc.ocrText,
+          tags: doc.tags
+        }))
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const jsonBlob = new Blob([jsonString], { type: 'application/json' });
+      const jsonBase64 = await this.blobToBase64(jsonBlob);
 
       // Upload JSON
       const jsonResult = await this.uploadFile(
@@ -93,23 +112,55 @@ class GitHubService {
         return { success: false, message: `JSON Upload fehlgeschlagen: ${jsonResult.message}` };
       }
 
-      // Upload ZIP
-      const zipResult = await this.uploadFile(
-        config,
-        'images.zip',
-        zipBase64,
-        'Update images.zip'
-      );
+      // Upload Bilder nach Jahr/Monat organisiert
+      let uploadedImages = 0;
+      for (const doc of documents) {
+        if (doc.blob) {
+          // Extrahiere Jahr/Monat aus documentDate oder uploadDate
+          const date = doc.documentDate || doc.uploadDate;
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
 
-      if (!zipResult.success) {
-        return { success: false, message: `ZIP Upload fehlgeschlagen: ${zipResult.message}` };
+          // Bestimme Dateinamen
+          const extension = this.getFileExtension(doc.blob.type);
+          let basename: string;
+          if (doc.originalFilename) {
+            basename = doc.originalFilename.replace(/\.[^/.]+$/, '');
+          } else {
+            basename = doc.filename.replace(/\.[^/.]+$/, '');
+          }
+
+          const filename = `${basename}${extension}`;
+          const path = `images/${year}/${month}/${filename}`;
+
+          // Konvertiere Blob zu Base64
+          const imageBase64 = await this.blobToBase64(doc.blob);
+
+          // Upload Bild
+          const imageResult = await this.uploadFile(
+            config,
+            path,
+            imageBase64,
+            `Update ${filename}`
+          );
+
+          if (imageResult.success) {
+            uploadedImages++;
+            console.log(`✅ Hochgeladen: ${path}`);
+          } else {
+            console.warn(`⚠️ Fehler bei: ${path}`);
+          }
+        }
       }
 
       const timestamp = new Date().toISOString();
       localStorage.setItem('last_sync', timestamp);
 
-      console.log('✅ GitHub Sync erfolgreich!');
-      return { success: true, message: 'Backup erfolgreich zu GitHub hochgeladen!' };
+      console.log(`✅ GitHub Sync erfolgreich! ${uploadedImages} Bilder hochgeladen`);
+      return {
+        success: true,
+        message: `Backup erfolgreich!\n${documents.length} Dokumente\n${uploadedImages} Bilder`
+      };
 
     } catch (error: any) {
       console.error('❌ GitHub Sync Fehler:', error);
@@ -132,24 +183,90 @@ class GitHubService {
         return { success: false, message: 'backup.json nicht gefunden' };
       }
 
-      // Download ZIP
-      const zipFile = await this.downloadFile(config, 'images.zip');
+      // Parse JSON
+      const jsonText = atob(jsonFile.content);
+      const backupData = JSON.parse(jsonText);
 
-      // Konvertiere Base64 zurück zu Blobs
-      const jsonBlob = this.base64ToBlob(jsonFile.content, 'application/json');
-      const zipBlob = zipFile ? this.base64ToBlob(zipFile.content, 'application/zip') : undefined;
+      console.log(`📄 ${backupData.documents.length} Dokumente gefunden`);
 
-      // Importiere Daten
-      const jsonFileObj = new File([jsonBlob], 'backup.json', { type: 'application/json' });
-      const zipFileObj = zipBlob ? new File([zipBlob], 'images.zip', { type: 'application/zip' }) : undefined;
+      // Lade alle Bilder von GitHub (Jahr/Monat Struktur)
+      let loadedImages = 0;
+      let successCount = 0;
+      let errorCount = 0;
 
-      const result = await importService.importFromBackup(jsonFileObj, zipFileObj);
+      for (const backupDoc of backupData.documents) {
+        try {
+          // Bestimme Jahr/Monat
+          const date = backupDoc.documentDate
+            ? new Date(backupDoc.documentDate)
+            : new Date(backupDoc.uploadDate);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
 
-      console.log(`✅ Import von GitHub: ${result.success} erfolgreich, ${result.errors} Fehler`);
+          // Bestimme Dateinamen
+          let basename: string;
+          if (backupDoc.originalFilename) {
+            basename = backupDoc.originalFilename.replace(/\.[^/.]+$/, '');
+          } else {
+            basename = backupDoc.filename.replace(/\.[^/.]+$/, '');
+          }
+
+          // Probiere verschiedene Extensions
+          const possibleExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+          let imageBlob: Blob | null = null;
+
+          for (const ext of possibleExtensions) {
+            const filename = `${basename}${ext}`;
+            const path = `images/${year}/${month}/${filename}`;
+
+            const imageFile = await this.downloadFile(config, path);
+            if (imageFile) {
+              // Konvertiere Base64 zu Blob (WICHTIG: richtige MIME-Type!)
+              const mimeType = this.getMimeTypeFromExtension(ext);
+              imageBlob = this.base64ToBlob(imageFile.content, mimeType);
+              console.log(`✅ Bild geladen: ${path} (${imageBlob.size} bytes)`);
+              loadedImages++;
+              break;
+            }
+          }
+
+          // Erstelle Platzhalter wenn kein Bild gefunden
+          if (!imageBlob) {
+            console.warn(`⚠️ Kein Bild gefunden für ${backupDoc.filename}`);
+            imageBlob = this.createPlaceholderBlob(backupDoc.filename);
+          }
+
+          // Speichere Dokument in Datenbank
+          const newDoc = {
+            filename: backupDoc.filename,
+            originalFilename: backupDoc.originalFilename,
+            blob: imageBlob,
+            uploadDate: new Date(backupDoc.uploadDate),
+            documentDate: backupDoc.documentDate ? new Date(backupDoc.documentDate) : undefined,
+            customer: backupDoc.customer ?? undefined,
+            amount: backupDoc.amount ?? undefined,
+            extractedText: backupDoc.extractedText ?? undefined,
+            ocrConfidence: backupDoc.ocrConfidence ?? undefined,
+            fileHash: backupDoc.fileHash,
+            invoiceNumber: backupDoc.invoiceNumber,
+            ocrText: backupDoc.ocrText,
+            tags: backupDoc.tags
+          };
+
+          await db.documents.add(newDoc as any);
+          successCount++;
+
+        } catch (error) {
+          console.error('Fehler beim Import eines Dokuments:', error);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ Import abgeschlossen: ${successCount} erfolgreich, ${errorCount} Fehler, ${loadedImages} Bilder`);
 
       return {
         success: true,
-        message: `Import erfolgreich: ${result.success} Dokumente geladen`
+        message: `Import erfolgreich!\n${successCount} Dokumente\n${loadedImages} Bilder geladen`
       };
 
     } catch (error: any) {
@@ -249,6 +366,47 @@ class GitHubService {
       bytes[i] = binaryString.charCodeAt(i);
     }
     return new Blob([bytes], { type });
+  }
+
+  private getMimeTypeFromExtension(extension: string): string {
+    const mimeMap: { [key: string]: string } = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf',
+      '.svg': 'image/svg+xml'
+    };
+    return mimeMap[extension.toLowerCase()] || 'image/jpeg';
+  }
+
+  private getFileExtension(mimeType: string): string {
+    const mimeMap: { [key: string]: string } = {
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'image/svg+xml': '.svg',
+      'application/pdf': '.pdf'
+    };
+    return mimeMap[mimeType] || '.jpg';
+  }
+
+  private createPlaceholderBlob(filename: string): Blob {
+    const svg = `
+      <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+        <rect width="400" height="300" fill="#1e293b"/>
+        <text x="200" y="140" font-family="Arial" font-size="16" fill="#64748b" text-anchor="middle">
+          Bild nicht gefunden
+        </text>
+        <text x="200" y="170" font-family="Arial" font-size="12" fill="#94a3b8" text-anchor="middle">
+          ${filename}
+        </text>
+      </svg>
+    `;
+    return new Blob([svg], { type: 'image/svg+xml' });
   }
 
   getLastSyncTime(): string | null {
