@@ -4,7 +4,7 @@ import { modalService } from '../services/modal.service';
 import { Settings as SettingsIcon, Github, Upload, Download, Check, X, Info } from 'lucide-react';
 import './Settings.css';
 
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 
 export const Settings: React.FC = () => {
   const [githubToken, setGithubToken] = useState('');

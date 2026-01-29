@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, Edit, Download, Trash2 } from 'lucide-react';
 import { Document } from '../../types/document';
 import { DocumentDetail } from './DocumentDetail';
-import { DocumentEditor } from '../DocumentEditor/DocumentEditor';
+import { DocumentEditor } from '../DocumentEditor';
 import { db } from '../../services/database.service';
 import { modalService } from '../../services/modal.service';
 import './DocumentCard.css';

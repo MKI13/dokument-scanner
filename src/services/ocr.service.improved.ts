@@ -241,39 +241,40 @@ export function extractAmountImproved(text: string): number | null {
   console.log('📄 Text Länge:', text.length, 'Zeichen');
 
   // Normalisiere Text - OCR erkennt € manchmal als C, e, o, etc.
+  // WICHTIG: Komma NICHT ersetzen, da es Dezimaltrennzeichen ist!
   const normalized = text
     .replace(/\s+/g, ' ')
-    .replace(/[Cc©€eE]\s*(?=\d)/g, '€ ')  // C/e/E vor Zahl → €
-    .replace(/(\d)\s*[Cc©€eE]/g, '$1 €')  // C/e/E nach Zahl → €
-    .replace(/[oO0]\s*(?=\d)/g, '€ ');  // O vor Zahl → €
+    .replace(/[Cc©€eE]\s*(?=\d)/g, 'EUR ')  // C/e/E vor Zahl → EUR
+    .replace(/(\d)\s*[Cc©€eE]\s/g, '$1 EUR ')  // C/e/E nach Zahl → EUR
+    .replace(/[oO0](?=\s*\d{1,3}[.,]\d{2})/g, 'EUR');  // O vor Betrag → EUR
 
   console.log('🔍 Normalisierter Text (erste 500 Zeichen):', normalized.substring(0, 500));
 
-  // Deutsche Betragsformate mit verschiedenen Schlüsselwörtern - SEHR AGGRESSIV
+  // Deutsche Betragsformate - SEHR PRÄZISE für Komma als Dezimaltrennzeichen
   const amountPatterns = [
-    // PRIORITÄT 1: Mit klaren Schlüsselwörtern
-    /(?:SUMME|GESAMT|TOTAL|ENDBETRAG|BETRAG|RECHNUNGSBETRAG|RECHNUNGSBET|AMOUNT|SUM|BRUTTO|NETTO|SALDO)[\s:*€CcOoeE-]*([0-9]{1,}[.,]\d{2})/gi,
+    // PRIORITÄT 1: Mit klaren Schlüsselwörtern + Komma-Dezimaltrennung
+    /(?:SUMME|GESAMT|TOTAL|ENDBETRAG|BETRAG|RECHNUNGSBETRAG|RECHNUNGSBET|AMOUNT|SUM|BRUTTO|NETTO|SALDO)[\s:*€CcOoeE-]*(\d{1,3},\d{2})(?!\d)/gi,
 
-    // PRIORITÄT 2: "Zu zahlen", "Fällig"
-    /(?:ZU\s+ZAHLEN|ZAHLBAR|F[ÄA]LLIG|ZAHLUNG|PAY|PAYABLE)[\s:*€CcOoeE-]*([0-9]{1,}[.,]\d{2})/gi,
+    // PRIORITÄT 2: "Zu zahlen", "Fällig" + Komma
+    /(?:ZU\s+ZAHLEN|ZAHLBAR|F[ÄA]LLIG|ZAHLUNG|PAY|PAYABLE)[\s:*€CcOoeE-]*(\d{1,3},\d{2})(?!\d)/gi,
 
-    // PRIORITÄT 3: "123,45 EUR/€/C/e" - mit Währung dahinter
-    /([0-9]{1,}[.,]\d{2})\s*(?:EUR|€|C|c|e|E)(?:\s|$|[^0-9])/gi,
+    // PRIORITÄT 3: "12,34 EUR" - Betrag mit Komma + Währung dahinter
+    /(\d{1,3},\d{2})\s*(?:EUR|€)(?:\s|$|[^0-9,.])/gi,
 
-    // PRIORITÄT 4: "EUR/€/C 123,45" - Währung davor
-    /(?:EUR|€|C|e|E)\s*([0-9]{1,}[.,]\d{2})/gi,
+    // PRIORITÄT 4: "EUR 12,34" - Währung davor + Komma-Betrag
+    /(?:EUR|€)\s*(\d{1,3},\d{2})(?!\d)/gi,
 
-    // PRIORITÄT 5: Beträge mit Tausenderpunkt "1.234,56"
-    /([0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{2})\b/g,
+    // PRIORITÄT 5: Beträge mit Tausenderpunkt + Komma "1.234,56"
+    /(\d{1,3}(?:\.\d{3})+,\d{2})(?!\d)/g,
 
-    // PRIORITÄT 6: Beliebiger Betrag mit Komma "XX,XX"
-    /\b([0-9]{2,},[0-9]{2})\b/g,
+    // PRIORITÄT 6: Beliebiger Betrag mit Komma "XX,XX" (zwischen 0,01 und 999,99)
+    /\b(\d{1,3},\d{2})\b/g,
 
-    // PRIORITÄT 7: Betrag mit Punkt "XX.XX" (englisches Format - nur falls nichts anderes)
-    /\b([0-9]{2,}\.[0-9]{2})\b/g
+    // PRIORITÄT 7: Englisches Format "XX.XX" NUR mit EUR/$ Kontext
+    /(?:EUR|USD|\$|€)\s*(\d{1,3}\.\d{2})(?!\d)/gi
   ];
 
-  const foundAmounts: { amount: number; priority: number }[] = [];
+  const foundAmounts: { amount: number; priority: number; raw: string }[] = [];
 
   amountPatterns.forEach((pattern, priority) => {
     const matches = Array.from(normalized.matchAll(pattern));
@@ -281,17 +282,28 @@ export function extractAmountImproved(text: string): number | null {
 
     for (const match of matches) {
       if (match[1]) {
+        const raw = match[1];
+
         // Konvertiere deutsches Format zu Zahl
-        let cleaned = match[1]
-          .replace(/\./g, '')  // Tausenderpunkte entfernen
-          .replace(',', '.');  // Komma zu Punkt
+        let cleaned = raw;
+
+        // Wenn es ein deutsches Format ist (Komma als Dezimaltrenner)
+        if (raw.includes(',')) {
+          cleaned = raw
+            .replace(/\./g, '')  // Tausenderpunkte entfernen
+            .replace(',', '.');  // Komma zu Punkt für parseFloat
+        }
+        // Wenn englisches Format (Punkt als Dezimaltrenner) - nur bei EUR/$ Kontext
+        // (wird nur von Pattern 7 gefunden)
 
         const amount = parseFloat(cleaned);
 
         // Validiere Betrag (zwischen 0,01 und 1.000.000)
         if (!isNaN(amount) && amount >= 0.01 && amount <= 1000000) {
-          console.log(`  ✓ Kandidat: ${amount.toFixed(2)} EUR (Priorität ${priority + 1})`);
-          foundAmounts.push({ amount, priority });
+          console.log(`  ✓ Kandidat: ${amount.toFixed(2)} EUR (Priorität ${priority + 1}, Roh: "${raw}")`);
+          foundAmounts.push({ amount, priority, raw });
+        } else {
+          console.log(`  ✗ Ungültig: ${amount} (aus "${raw}")`);
         }
       }
     }
@@ -299,18 +311,21 @@ export function extractAmountImproved(text: string): number | null {
 
   if (foundAmounts.length > 0) {
     // Sortiere nach Priorität (niedrigere Nummer = höhere Priorität)
-    foundAmounts.sort((a, b) => a.priority - b.priority);
+    foundAmounts.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      // Bei gleicher Priorität: größerer Betrag gewinnt
+      return b.amount - a.amount;
+    });
 
     // Nehme die Beträge mit höchster Priorität
     const highestPriority = foundAmounts[0].priority;
-    const topPriorityAmounts = foundAmounts
-      .filter(a => a.priority === highestPriority)
-      .map(a => a.amount);
+    const topPriorityAmounts = foundAmounts.filter(a => a.priority === highestPriority);
 
     // Von den top Priorität-Beträgen nehme den größten
-    const maxAmount = Math.max(...topPriorityAmounts);
-    console.log(`✅ BETRAG GEFUNDEN: ${maxAmount.toFixed(2)} EUR (Priorität ${highestPriority + 1}, aus ${foundAmounts.length} Kandidaten)`);
-    return maxAmount;
+    const best = topPriorityAmounts.reduce((max, curr) => curr.amount > max.amount ? curr : max);
+
+    console.log(`✅ BETRAG GEFUNDEN: ${best.amount.toFixed(2)} EUR (Priorität ${best.priority + 1}, Roh: "${best.raw}", aus ${foundAmounts.length} Kandidaten)`);
+    return best.amount;
   }
 
   console.log('⚠️ KEIN BETRAG GEFUNDEN - prüfe OCR Text!');
