@@ -23,7 +23,7 @@ export default function Header({ activeView, onViewChange, onDeleteAll, deleteMo
     <>
       <div className="app-header">
         <h1>Dokument Scanner</h1>
-        <span className="app-version">v1.5.9</span>
+        <span className="app-version">v1.7.0</span>
       </div>
 
       <div className="top-navigation">

@@ -216,7 +216,9 @@ export function extractDateImproved(text: string): Date | null {
 
       // 2-stelliges Jahr zu 4-stellig
       if (year! < 100) {
+        const originalYear = year;
         year = year! < 50 ? 2000 + year! : 1900 + year!;
+        console.log(`📅 2-stelliges Jahr konvertiert: ${originalYear} → ${year}`);
       }
 
       // Validiere Datum
@@ -225,9 +227,11 @@ export function extractDateImproved(text: string): Date | null {
 
         // Prüfe ob Datum gültig ist
         if (!isNaN(date.getTime())) {
-          console.log('✅ Datum gefunden:', date.toLocaleDateString('de-DE'));
+          console.log(`✅ Datum gefunden: ${day}.${month}.${year} → ${date.toLocaleDateString('de-DE')}`);
           return date;
         }
+      } else {
+        console.log(`❌ Datum ungültig: Tag=${day}, Monat=${month}, Jahr=${year}`);
       }
     }
   }
@@ -250,28 +254,31 @@ export function extractAmountImproved(text: string): number | null {
 
   console.log('🔍 Normalisierter Text (erste 500 Zeichen):', normalized.substring(0, 500));
 
-  // Deutsche Betragsformate - SEHR PRÄZISE für Komma als Dezimaltrennzeichen
+  // Deutsche Betragsformate - BRUTTO hat HÖCHSTE Priorität!
   const amountPatterns = [
-    // PRIORITÄT 1: Mit klaren Schlüsselwörtern + Komma-Dezimaltrennung
-    /(?:SUMME|GESAMT|TOTAL|ENDBETRAG|BETRAG|RECHNUNGSBETRAG|RECHNUNGSBET|AMOUNT|SUM|BRUTTO|NETTO|SALDO)[\s:*€CcOoeE-]*(\d{1,3},\d{2})(?!\d)/gi,
+    // PRIORITÄT 1: BRUTTO Betrag (ENDPREIS - das was bezahlt werden muss!)
+    /(?:BRUTTO|ENDBETRAG|RECHNUNGSBETRAG)[\s:*€CcOoeE-]*(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/gi,
 
-    // PRIORITÄT 2: "Zu zahlen", "Fällig" + Komma
-    /(?:ZU\s+ZAHLEN|ZAHLBAR|F[ÄA]LLIG|ZAHLUNG|PAY|PAYABLE)[\s:*€CcOoeE-]*(\d{1,3},\d{2})(?!\d)/gi,
+    // PRIORITÄT 2: SUMME, GESAMT, TOTAL (ohne NETTO/BRUTTO)
+    /(?:SUMME|GESAMT|TOTAL|BETRAG|AMOUNT|SUM|SALDO)(?!\s*NETTO)[\s:*€CcOoeE-]*(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/gi,
 
-    // PRIORITÄT 3: "12,34 EUR" - Betrag mit Komma + Währung dahinter
-    /(\d{1,3},\d{2})\s*(?:EUR|€)(?:\s|$|[^0-9,.])/gi,
+    // PRIORITÄT 3: "Zu zahlen", "Fällig" (was wirklich bezahlt werden muss)
+    /(?:ZU\s+ZAHLEN|ZAHLBAR|F[ÄA]LLIG|ZAHLUNG|PAY|PAYABLE)[\s:*€CcOoeE-]*(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/gi,
 
-    // PRIORITÄT 4: "EUR 12,34" - Währung davor + Komma-Betrag
-    /(?:EUR|€)\s*(\d{1,3},\d{2})(?!\d)/gi,
+    // PRIORITÄT 4: "12,34 EUR" - Betrag mit Komma + Währung dahinter (generisch)
+    /(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:EUR|€)(?:\s|$|[^0-9,.])/gi,
 
-    // PRIORITÄT 5: Beträge mit Tausenderpunkt + Komma "1.234,56"
-    /(\d{1,3}(?:\.\d{3})+,\d{2})(?!\d)/g,
+    // PRIORITÄT 5: "EUR 12,34" - Währung davor + Komma-Betrag
+    /(?:EUR|€)\s*(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/gi,
 
-    // PRIORITÄT 6: Beliebiger Betrag mit Komma "XX,XX" (zwischen 0,01 und 999,99)
-    /\b(\d{1,3},\d{2})\b/g,
+    // PRIORITÄT 6: Beliebiger Betrag mit Komma "XX,XX" (als letzter Fallback)
+    /\b(\d{1,3}(?:\.\d{3})*,\d{2})\b/g,
 
     // PRIORITÄT 7: Englisches Format "XX.XX" NUR mit EUR/$ Kontext
-    /(?:EUR|USD|\$|€)\s*(\d{1,3}\.\d{2})(?!\d)/gi
+    /(?:EUR|USD|\$|€)\s*(\d{1,3}(?:\.\d{3})*\.\d{2})(?!\d)/gi,
+
+    // PRIORITÄT 8: NETTO (NIEDRIGSTE Priorität - nur als letzter Ausweg!)
+    /(?:NETTO)[\s:*€CcOoeE-]*(\d{1,3}(?:\.\d{3})*,\d{2})(?!\d)/gi
   ];
 
   const foundAmounts: { amount: number; priority: number; raw: string }[] = [];
