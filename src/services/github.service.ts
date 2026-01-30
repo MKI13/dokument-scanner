@@ -239,28 +239,45 @@ class GitHubService {
             basename = backupDoc.filename.replace(/\.[^/.]+$/, '');
           }
 
-          console.log(`  📝 Basename: ${basename}`);
+          console.log(`  📝 Basename (original): ${basename}`);
 
           // WICHTIG: Erstelle Dateinamen-Varianten für alte/neue Uploads!
-          const basenameVariants: string[] = [basename];
+          const basenameVariants: string[] = [];
 
-          // Wenn â¬ (korrupt) im Namen -> probiere auch mit €
-          if (basename.includes('â¬')) {
-            basenameVariants.push(basename.replace(/â¬/g, '€'));
-            console.log(`  🔄 Korrigiere â¬ → €`);
+          // 1. BEREINIGE BASENAME: Entferne trailing "-" (kommt von â¬- Korruption)
+          const cleanedBasename = basename.replace(/-+$/, '');
+          basenameVariants.push(cleanedBasename);
+          if (cleanedBasename !== basename) {
+            console.log(`  🧹 Entferne trailing '-': ${basename} → ${cleanedBasename}`);
           }
 
-          // Wenn € im Namen -> probiere auch mit EUR
+          // 2. Ersetze â¬- (doppelt korrupt) oder â¬ (einfach korrupt) mit €
+          if (basename.includes('â¬')) {
+            const withEuro = basename.replace(/â¬-?/g, '€');
+            basenameVariants.push(withEuro);
+            console.log(`  🔄 Korrigiere â¬ → €: ${withEuro}`);
+          }
+
+          // 3. Ersetze € mit EUR (neue Version)
           if (basename.includes('€')) {
-            basenameVariants.push(basename.replace(/€/g, 'EUR'));
-            console.log(`  🔄 Probiere € → EUR`);
+            const withEUR = basename.replace(/€/g, 'EUR');
+            basenameVariants.push(withEUR);
+            console.log(`  🔄 Probiere € → EUR: ${withEUR}`);
           }
 
-          // Wenn â¬ im Namen -> probiere auch direkt mit EUR (doppelt korrupt → neu)
+          // 4. Ersetze â¬- oder â¬ direkt mit EUR
           if (basename.includes('â¬')) {
-            basenameVariants.push(basename.replace(/â¬/g, 'EUR'));
-            console.log(`  🔄 Probiere â¬ → EUR`);
+            const withEUR = basename.replace(/â¬-?/g, 'EUR');
+            basenameVariants.push(withEUR);
+            console.log(`  🔄 Probiere â¬ → EUR: ${withEUR}`);
           }
+
+          // 5. Original basename (mit trailing -)
+          if (!basenameVariants.includes(basename)) {
+            basenameVariants.push(basename);
+          }
+
+          console.log(`  📋 Gesamt ${basenameVariants.length} Basename-Varianten`);
 
           // Probiere verschiedene Extensions UND Pfade!
           const possibleExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
