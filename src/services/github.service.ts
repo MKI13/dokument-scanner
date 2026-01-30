@@ -176,12 +176,32 @@ class GitHubService {
 
     try {
       console.log('📥 Lade Daten von GitHub...');
+      console.log(`📂 Repository: ${config.owner}/${config.repo}`);
 
-      // Download JSON
-      const jsonFile = await this.downloadFile(config, 'backup.json');
-      if (!jsonFile) {
-        return { success: false, message: 'backup.json nicht gefunden' };
+      // Download JSON - Probiere verschiedene Dateinamen
+      const possiblePaths = ['backup.json', 'documents.json', 'data.json'];
+      let jsonFile = null;
+      let usedPath = '';
+
+      for (const path of possiblePaths) {
+        console.log(`🔍 Suche nach: ${path}`);
+        jsonFile = await this.downloadFile(config, path);
+        if (jsonFile) {
+          usedPath = path;
+          console.log(`✅ JSON gefunden: ${path}`);
+          break;
+        } else {
+          console.log(`❌ Nicht gefunden: ${path}`);
+        }
       }
+
+      if (!jsonFile) {
+        const errorMsg = `JSON-Datei nicht gefunden.\n\nGesuchte Dateien:\n${possiblePaths.join('\n')}\n\nPrüfe ob die Datei im Repository existiert:\nhttps://github.com/${config.owner}/${config.repo}`;
+        console.error('❌ ' + errorMsg);
+        return { success: false, message: errorMsg };
+      }
+
+      console.log(`📄 Verwende: ${usedPath}`);
 
       // Parse JSON
       const jsonText = atob(jsonFile.content);
@@ -325,6 +345,8 @@ class GitHubService {
     try {
       const url = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${path}`;
 
+      console.log(`  🔗 API Call: GET ${url}`);
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${config.token}`,
@@ -332,17 +354,32 @@ class GitHubService {
         },
       });
 
+      console.log(`  📡 Response Status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
         if (response.status === 404) {
+          console.log(`  ℹ️ Datei existiert nicht: ${path}`);
           return null;
         }
-        throw new Error('Download fehlgeschlagen');
+        if (response.status === 403) {
+          console.error(`  ❌ Zugriff verweigert (403). Prüfe Token-Berechtigungen!`);
+          return null;
+        }
+        if (response.status === 401) {
+          console.error(`  ❌ Nicht autorisiert (401). Token ungültig!`);
+          return null;
+        }
+        const errorText = await response.text();
+        console.error(`  ❌ HTTP ${response.status}: ${errorText}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log(`  ✅ Datei geladen: ${path} (${data.size} bytes)`);
+      return data;
 
-    } catch (error) {
-      console.error(`Fehler beim Download von ${path}:`, error);
+    } catch (error: any) {
+      console.error(`  ❌ Fehler beim Download von ${path}:`, error.message || error);
       return null;
     }
   }
