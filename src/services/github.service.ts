@@ -113,6 +113,7 @@ class GitHubService {
       }
 
       // Upload Bilder nach Jahr/Monat organisiert
+      console.log('\n📤 Starte Bild-Upload...');
       let uploadedImages = 0;
       for (const doc of documents) {
         if (doc.blob) {
@@ -133,6 +134,8 @@ class GitHubService {
           const filename = `${basename}${extension}`;
           const path = `images/${year}/${month}/${filename}`;
 
+          console.log(`  📁 Upload: ${path}`);
+
           // Konvertiere Blob zu Base64
           const imageBase64 = await this.blobToBase64(doc.blob);
 
@@ -146,12 +149,13 @@ class GitHubService {
 
           if (imageResult.success) {
             uploadedImages++;
-            console.log(`✅ Hochgeladen: ${path}`);
+            console.log(`    ✅ Erfolgreich`);
           } else {
-            console.warn(`⚠️ Fehler bei: ${path}`);
+            console.error(`    ❌ Fehler: ${imageResult.message}`);
           }
         }
       }
+      console.log(`\n📊 Upload abgeschlossen: ${uploadedImages}/${documents.length} Bilder`);
 
       const timestamp = new Date().toISOString();
       localStorage.setItem('last_sync', timestamp);
@@ -216,12 +220,16 @@ class GitHubService {
 
       for (const backupDoc of backupData.documents) {
         try {
+          console.log(`\n📄 Verarbeite: ${backupDoc.filename}`);
+
           // Bestimme Jahr/Monat
           const date = backupDoc.documentDate
             ? new Date(backupDoc.documentDate)
             : new Date(backupDoc.uploadDate);
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
+
+          console.log(`  📅 Datum: ${year}/${month}`);
 
           // Bestimme Dateinamen
           let basename: string;
@@ -231,20 +239,42 @@ class GitHubService {
             basename = backupDoc.filename.replace(/\.[^/.]+$/, '');
           }
 
-          // Probiere verschiedene Extensions
+          console.log(`  📝 Basename: ${basename}`);
+
+          // Probiere verschiedene Extensions UND Pfade!
           const possibleExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
           let imageBlob: Blob | null = null;
+          let foundPath: string | null = null;
+
+          // Erstelle alle möglichen Pfad-Kombinationen
+          const pathVariants: string[] = [];
 
           for (const ext of possibleExtensions) {
             const filename = `${basename}${ext}`;
-            const path = `images/${year}/${month}/${filename}`;
 
+            // Variante 1: Jahr/Monat Struktur (NEU - aktuelle Version)
+            pathVariants.push(`images/${year}/${month}/${filename}`);
+
+            // Variante 2: Flache Struktur in images/ (ALT - ältere Versionen)
+            pathVariants.push(`images/${filename}`);
+
+            // Variante 3: Root-Level (falls manuell hochgeladen)
+            pathVariants.push(filename);
+          }
+
+          console.log(`  🔍 Probiere ${pathVariants.length} Pfad-Varianten...`);
+
+          // Probiere alle Pfade
+          for (const path of pathVariants) {
             const imageFile = await this.downloadFile(config, path);
+
             if (imageFile) {
-              // Konvertiere Base64 zu Blob (WICHTIG: richtige MIME-Type!)
+              // Extension aus Pfad extrahieren
+              const ext = path.match(/\.[^.]+$/)?.[0] || '.jpg';
               const mimeType = this.getMimeTypeFromExtension(ext);
               imageBlob = this.base64ToBlob(imageFile.content, mimeType);
-              console.log(`✅ Bild geladen: ${path} (${imageBlob.size} bytes)`);
+              foundPath = path;
+              console.log(`    ✅ GEFUNDEN: ${path} (${imageBlob.size} bytes, ${mimeType})`);
               loadedImages++;
               break;
             }
@@ -252,7 +282,8 @@ class GitHubService {
 
           // Erstelle Platzhalter wenn kein Bild gefunden
           if (!imageBlob) {
-            console.warn(`⚠️ Kein Bild gefunden für ${backupDoc.filename}`);
+            console.error(`  ❌ KEIN BILD GEFUNDEN für ${backupDoc.filename}`);
+            console.error(`  💡 Probierte Pfade (erste 3):`, pathVariants.slice(0, 3));
             imageBlob = this.createPlaceholderBlob(backupDoc.filename);
           }
 
