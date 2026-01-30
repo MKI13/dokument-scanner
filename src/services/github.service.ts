@@ -241,6 +241,27 @@ class GitHubService {
 
           console.log(`  📝 Basename: ${basename}`);
 
+          // WICHTIG: Erstelle Dateinamen-Varianten für alte/neue Uploads!
+          const basenameVariants: string[] = [basename];
+
+          // Wenn â¬ (korrupt) im Namen -> probiere auch mit €
+          if (basename.includes('â¬')) {
+            basenameVariants.push(basename.replace(/â¬/g, '€'));
+            console.log(`  🔄 Korrigiere â¬ → €`);
+          }
+
+          // Wenn € im Namen -> probiere auch mit EUR
+          if (basename.includes('€')) {
+            basenameVariants.push(basename.replace(/€/g, 'EUR'));
+            console.log(`  🔄 Probiere € → EUR`);
+          }
+
+          // Wenn â¬ im Namen -> probiere auch direkt mit EUR (doppelt korrupt → neu)
+          if (basename.includes('â¬')) {
+            basenameVariants.push(basename.replace(/â¬/g, 'EUR'));
+            console.log(`  🔄 Probiere â¬ → EUR`);
+          }
+
           // Probiere verschiedene Extensions UND Pfade!
           const possibleExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
           let imageBlob: Blob | null = null;
@@ -249,17 +270,20 @@ class GitHubService {
           // Erstelle alle möglichen Pfad-Kombinationen
           const pathVariants: string[] = [];
 
-          for (const ext of possibleExtensions) {
-            const filename = `${basename}${ext}`;
+          // FÜR JEDE BASENAME-VARIANTE alle Extensions und Pfade probieren!
+          for (const baseVariant of basenameVariants) {
+            for (const ext of possibleExtensions) {
+              const filename = `${baseVariant}${ext}`;
 
-            // Variante 1: Jahr/Monat Struktur (NEU - aktuelle Version)
-            pathVariants.push(`images/${year}/${month}/${filename}`);
+              // Variante 1: Jahr/Monat Struktur (NEU - aktuelle Version)
+              pathVariants.push(`images/${year}/${month}/${filename}`);
 
-            // Variante 2: Flache Struktur in images/ (ALT - ältere Versionen)
-            pathVariants.push(`images/${filename}`);
+              // Variante 2: Flache Struktur in images/ (ALT - ältere Versionen)
+              pathVariants.push(`images/${filename}`);
 
-            // Variante 3: Root-Level (falls manuell hochgeladen)
-            pathVariants.push(filename);
+              // Variante 3: Root-Level (falls manuell hochgeladen)
+              pathVariants.push(filename);
+            }
           }
 
           console.log(`  🔍 Probiere ${pathVariants.length} Pfad-Varianten...`);
