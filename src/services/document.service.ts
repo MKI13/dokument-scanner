@@ -247,7 +247,7 @@ class DocumentService {
 
     const ext = file.name.split('.').pop() || 'jpg';
 
-    return `${date}_${customer}_${amount}€.${ext}`;
+    return `${date}_${customer}_${amount}EUR.${ext}`;
   }
 
   async getAllDocuments(): Promise<Document[]> {
