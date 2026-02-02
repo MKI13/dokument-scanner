@@ -88,14 +88,14 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 </div>
               )}
 
-              {document.date && (
+              {document.documentDate && (
                 <div className="info-item">
                   <div className="info-label">
                     <Calendar size={16} />
                     <span>Rechnungsdatum</span>
                   </div>
                   <div className="info-value">
-                    {new Date(document.date).toLocaleDateString('de-DE')}
+                    {new Date(document.documentDate).toLocaleDateString('de-DE')}
                   </div>
                 </div>
               )}

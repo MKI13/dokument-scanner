@@ -46,15 +46,15 @@ class FilterService {
     // Datum-Filter
     if (filters.dateFrom) {
       filtered = filtered.filter(doc => {
-        if (!doc.date) return false;
-        return new Date(doc.date) >= filters.dateFrom!;
+        if (!doc.documentDate) return false;
+        return new Date(doc.documentDate) >= filters.dateFrom!;
       });
     }
 
     if (filters.dateTo) {
       filtered = filtered.filter(doc => {
-        if (!doc.date) return false;
-        return new Date(doc.date) <= filters.dateTo!;
+        if (!doc.documentDate) return false;
+        return new Date(doc.documentDate) <= filters.dateTo!;
       });
     }
 
@@ -107,7 +107,7 @@ class FilterService {
 
   getDateRange(documents: Document[]): { min: Date | null; max: Date | null } {
     const dates = documents
-      .map(doc => doc.date)
+      .map(doc => doc.documentDate)
       .filter((date): date is Date => date !== undefined)
       .map(date => new Date(date));
     

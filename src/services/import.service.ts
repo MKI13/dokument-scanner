@@ -4,12 +4,15 @@ import { Document } from '../types/document';
 
 interface BackupDocument {
   filename: string;
-  originalFilename: string;
+  originalFilename?: string;
   uploadDate: string;
-  customer?: string;
-  amount?: number;
+  documentDate?: string;
+  customer?: string | null;
+  amount?: number | null;
+  extractedText?: string | null;
+  ocrConfidence?: number | null;
+  fileHash?: string;
   invoiceNumber?: string;
-  date?: string;
   ocrText?: string;
   tags?: string[];
 }
@@ -36,25 +39,37 @@ class ImportService {
 
       if (zipFile) {
         try {
+          console.log('📦 Lade ZIP-Datei...');
           const zip = await JSZip.loadAsync(zipFile);
           const imageFolder = zip.folder('images');
 
           if (imageFolder) {
-            const files = Object.keys(zip.files).filter(name => 
+            const files = Object.keys(zip.files).filter(name =>
               name.startsWith('images/') && !zip.files[name].dir
             );
+
+            console.log(`📷 Gefunden: ${files.length} Bilder im ZIP`);
 
             for (const filename of files) {
               const file = zip.files[filename];
               const blob = await file.async('blob');
               const basename = filename.replace('images/', '');
               imageMap.set(basename, blob);
+              console.log(`   ✅ Geladen: ${basename} (${blob.size} bytes)`);
             }
+
+            console.log(`📊 Insgesamt ${imageMap.size} Bilder in Map gespeichert`);
+          } else {
+            console.warn('⚠️ Kein "images" Ordner im ZIP gefunden');
           }
         } catch (error) {
-          console.error('Fehler beim Laden des ZIP:', error);
+          console.error('❌ Fehler beim Laden des ZIP:', error);
         }
+      } else {
+        console.log('ℹ️ Kein ZIP-Archiv angegeben - erstelle Platzhalter-Bilder');
       }
+
+      console.log(`📄 Starte Import von ${backupData.documents.length} Dokumenten...`);
 
       for (const backupDoc of backupData.documents) {
         try {
@@ -63,15 +78,41 @@ class ImportService {
           const possibleExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
           let foundBlob: Blob | undefined;
 
-          for (const ext of possibleExtensions) {
-            const filename = `${backupDoc.originalFilename}${ext}`;
-            foundBlob = imageMap.get(filename);
+          // Erstelle Liste möglicher Basisnamen (wie beim Export)
+          const possibleBasenames: string[] = [];
+
+          // originalFilename könnte bereits Extension haben - entferne sie
+          if (backupDoc.originalFilename) {
+            const nameWithoutExt = backupDoc.originalFilename.replace(/\.[^/.]+$/, '');
+            possibleBasenames.push(nameWithoutExt);
+          }
+
+          // Fallback: filename ohne Extension (wie beim Export)
+          const filenameWithoutExt = backupDoc.filename.replace(/\.[^/.]+$/, '');
+          if (!possibleBasenames.includes(filenameWithoutExt)) {
+            possibleBasenames.push(filenameWithoutExt);
+          }
+
+          console.log(`🔍 Suche Bild für "${backupDoc.filename}"`);
+          console.log(`   Mögliche Basisnamen: ${possibleBasenames.join(', ')}`);
+
+          // Suche nach Bild mit allen Kombinationen
+          for (const basename of possibleBasenames) {
+            for (const ext of possibleExtensions) {
+              const filename = `${basename}${ext}`;
+              foundBlob = imageMap.get(filename);
+              if (foundBlob) {
+                console.log(`   ✅ Bild gefunden: ${filename} (${foundBlob.size} bytes)`);
+                break;
+              }
+            }
             if (foundBlob) break;
           }
 
           if (foundBlob) {
             blob = foundBlob;
           } else {
+            console.warn(`   ⚠️ Bild nicht gefunden - Erstelle Platzhalter`);
             blob = this.createPlaceholderImage(backupDoc.filename);
           }
 
@@ -80,10 +121,13 @@ class ImportService {
             originalFilename: backupDoc.originalFilename,
             blob: blob,
             uploadDate: new Date(backupDoc.uploadDate),
-            customer: backupDoc.customer || undefined,
-            amount: backupDoc.amount || undefined,
+            documentDate: backupDoc.documentDate ? new Date(backupDoc.documentDate) : undefined,
+            customer: backupDoc.customer ?? undefined,
+            amount: backupDoc.amount ?? undefined,
+            extractedText: backupDoc.extractedText ?? undefined,
+            ocrConfidence: backupDoc.ocrConfidence ?? undefined,
+            fileHash: backupDoc.fileHash,
             invoiceNumber: backupDoc.invoiceNumber,
-            date: backupDoc.date ? new Date(backupDoc.date) : undefined,
             ocrText: backupDoc.ocrText,
             tags: backupDoc.tags
           };
@@ -105,7 +149,7 @@ class ImportService {
 
   async exportToJSON(): Promise<string> {
     const documents = await db.documents.toArray();
-    
+
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
@@ -113,21 +157,24 @@ class ImportService {
         filename: doc.filename,
         originalFilename: doc.originalFilename,
         uploadDate: doc.uploadDate.toISOString(),
+        documentDate: doc.documentDate?.toISOString(),
         customer: doc.customer,
         amount: doc.amount,
+        extractedText: doc.extractedText,
+        ocrConfidence: doc.ocrConfidence,
+        fileHash: doc.fileHash,
         invoiceNumber: doc.invoiceNumber,
-        date: doc.date?.toISOString(),
         ocrText: doc.ocrText,
         tags: doc.tags
       }))
     };
-    
+
     return JSON.stringify(exportData, null, 2);
   }
 
   async exportWithImages(): Promise<{ json: Blob; zip: Blob }> {
     const documents = await db.documents.toArray();
-    
+
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
@@ -135,32 +182,45 @@ class ImportService {
         filename: doc.filename,
         originalFilename: doc.originalFilename,
         uploadDate: doc.uploadDate.toISOString(),
+        documentDate: doc.documentDate?.toISOString(),
         customer: doc.customer,
         amount: doc.amount,
+        extractedText: doc.extractedText,
+        ocrConfidence: doc.ocrConfidence,
+        fileHash: doc.fileHash,
         invoiceNumber: doc.invoiceNumber,
-        date: doc.date?.toISOString(),
         ocrText: doc.ocrText,
         tags: doc.tags
       }))
     };
-    
+
     const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: 'application/json'
     });
-    
+
     const zip = new JSZip();
     const folder = zip.folder('images');
-    
+
     for (const doc of documents) {
       if (doc.blob && folder) {
         const extension = this.getFileExtension(doc.blob.type);
-        const filename = `${doc.originalFilename}${extension}`;
+
+        // originalFilename könnte bereits Extension haben - entferne sie
+        let basename: string;
+        if (doc.originalFilename) {
+          basename = doc.originalFilename.replace(/\.[^/.]+$/, '');
+        } else {
+          basename = doc.filename.replace(/\.[^/.]+$/, '');
+        }
+
+        const filename = `${basename}${extension}`;
         folder.file(filename, doc.blob);
+        console.log(`📁 Exportiere: ${filename}`);
       }
     }
-    
+
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    
+
     return { json: jsonBlob, zip: zipBlob };
   }
 

@@ -1,14 +1,15 @@
-import { Calendar, FileText, Search, Trash2, Upload, Users, Copy } from 'lucide-react';
+import { Calendar, FileText, Search, Trash2, Upload, Users, Copy, Settings } from 'lucide-react';
 
 interface HeaderProps {
-  activeView: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates';
-  onViewChange: (view: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates') => void;
+  activeView: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates' | 'settings';
+  onViewChange: (view: 'upload' | 'documents' | 'customers' | 'month' | 'calendar' | 'duplicates' | 'settings') => void;
   onDeleteAll: () => void;
   deleteMode: boolean;
   onToggleDeleteMode: () => void;
+  duplicateCount: number;
 }
 
-export default function Header({ activeView, onViewChange, onDeleteAll, deleteMode, onToggleDeleteMode }: HeaderProps) {
+export default function Header({ activeView, onViewChange, onDeleteAll, deleteMode, onToggleDeleteMode, duplicateCount }: HeaderProps) {
   const handleDeleteClick = () => {
     if (deleteMode) {
       if (confirm('Möchten Sie wirklich ALLE Dokumente löschen?')) {
@@ -22,7 +23,7 @@ export default function Header({ activeView, onViewChange, onDeleteAll, deleteMo
     <>
       <div className="app-header">
         <h1>Dokument Scanner</h1>
-        <span className="app-version">v1.5.9</span>
+        <span className="app-version">v1.7.0</span>
       </div>
 
       <div className="top-navigation">
@@ -68,10 +69,21 @@ export default function Header({ activeView, onViewChange, onDeleteAll, deleteMo
 
         <button
           onClick={() => onViewChange('duplicates')}
-          className={activeView === 'duplicates' ? 'active' : ''}
+          className={`${activeView === 'duplicates' ? 'active' : ''} ${duplicateCount > 0 ? 'has-duplicates' : ''} ${duplicateCount >= 5 ? 'critical-duplicates' : ''}`}
         >
           <Copy size={20} />
           <span>Duplikate</span>
+          {duplicateCount > 0 && (
+            <span className="duplicate-badge">{duplicateCount}</span>
+          )}
+        </button>
+
+        <button
+          onClick={() => onViewChange('settings')}
+          className={activeView === 'settings' ? 'active' : ''}
+        >
+          <Settings size={20} />
+          <span>Einstellungen</span>
         </button>
 
         <button

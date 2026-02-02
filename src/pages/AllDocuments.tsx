@@ -10,8 +10,9 @@ import { Trash2, Download, Upload, Search, RefreshCw, ImagePlus, ArrowUpDown, Ed
 import './AllDocuments.css';
 
 interface AllDocumentsProps {
-  setSwipeEnabled: (enabled: boolean) => void;
-  refreshTrigger: number;
+  setSwipeEnabled?: (enabled: boolean) => void;
+  refreshTrigger?: number;
+  deleteMode?: boolean;
 }
 
 type SortOption = 'alphabet' | 'date' | 'upload';
@@ -86,8 +87,8 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
           if (amountStr.includes(query) || amountComma.includes(query)) return true;
         }
         
-        if (doc.date) {
-          const dateObj = new Date(doc.date);
+        if (doc.documentDate) {
+          const dateObj = new Date(doc.documentDate);
           const isoDate = dateObj.toISOString().split('T')[0];
           const deDate = dateObj.toLocaleDateString('de-DE');
           const year = dateObj.getFullYear().toString();
@@ -410,8 +411,8 @@ export const AllDocuments: React.FC<AllDocumentsProps> = ({ setSwipeEnabled, ref
                   <h3>{doc.filename}</h3>
                   {doc.customer && <p>👤 {doc.customer}</p>}
                   {doc.amount && <p>💰 {doc.amount.toFixed(2)} EUR</p>}
-                  {doc.date && (
-                    <p>📅 {new Date(doc.date).toLocaleDateString('de-DE')}</p>
+                  {doc.documentDate && (
+                    <p>📅 {new Date(doc.documentDate).toLocaleDateString('de-DE')}</p>
                   )}
                 </div>
                 

@@ -6,7 +6,7 @@ import { Trash2 } from 'lucide-react';
 import './Duplicates.css';
 
 interface DuplicatesProps {
-  setSwipeEnabled: (enabled: boolean) => void;
+  setSwipeEnabled?: (enabled: boolean) => void;
 }
 
 interface DuplicateGroup {

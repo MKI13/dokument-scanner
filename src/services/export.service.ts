@@ -15,7 +15,7 @@ class ExportService {
         customer: doc.customer,
         amount: doc.amount,
         invoiceNumber: doc.invoiceNumber,
-        date: doc.date?.toISOString(),
+        date: doc.documentDate?.toISOString(),
         ocrText: doc.ocrText,
         tags: doc.tags
       }))
@@ -37,7 +37,7 @@ class ExportService {
         customer: doc.customer,
         amount: doc.amount,
         invoiceNumber: doc.invoiceNumber,
-        date: doc.date?.toISOString(),
+        date: doc.documentDate?.toISOString(),
         ocrText: doc.ocrText,
         tags: doc.tags
       }))
@@ -108,8 +108,8 @@ class ExportService {
     const groups = new Map<string, typeof documents>();
     
     documents.forEach(doc => {
-      const key = doc.date 
-        ? `${doc.date.getFullYear()}-${String(doc.date.getMonth() + 1).padStart(2, '0')}`
+      const key = doc.documentDate 
+        ? `${doc.documentDate.getFullYear()}-${String(doc.documentDate.getMonth() + 1).padStart(2, '0')}`
         : 'Unbekannt';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(doc);

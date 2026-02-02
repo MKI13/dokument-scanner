@@ -26,8 +26,8 @@ export const MonthView: React.FC<MonthViewProps> = ({ setSwipeEnabled }) => {
     
     const allDocs = await db.documents.toArray();
     const monthDocs = allDocs.filter(doc => {
-      if (!doc.date) return false;
-      const docDate = new Date(doc.date);
+      if (!doc.documentDate) return false;
+      const docDate = new Date(doc.documentDate);
       return docDate >= startDate && docDate <= endDate;
     });
     
@@ -82,8 +82,8 @@ export const MonthView: React.FC<MonthViewProps> = ({ setSwipeEnabled }) => {
                   <h3>{doc.filename}</h3>
                   {doc.customer && <p>👤 {doc.customer}</p>}
                   {doc.amount && <p>💰 {doc.amount.toFixed(2)} EUR</p>}
-                  {doc.date && (
-                    <p>📅 {new Date(doc.date).toLocaleDateString('de-DE')}</p>
+                  {doc.documentDate && (
+                    <p>📅 {new Date(doc.documentDate).toLocaleDateString('de-DE')}</p>
                   )}
                 </div>
               </div>
